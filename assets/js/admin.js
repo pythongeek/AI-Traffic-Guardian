@@ -1,0 +1,599 @@
+/**
+ * AI Traffic Guardian — admin dashboard controller.
+ * Vanilla JS + Chart.js. Talks to the atg/v1 REST API.
+ */
+(function () {
+	'use strict';
+
+	var cfg = window.ATG_ADMIN || {};
+	var page = cfg.page || 'atg-dashboard';
+
+	/* ---------------- REST helper ---------------- */
+	function api(path, options) {
+		options = options || {};
+		var opts = {
+			method: options.method || 'GET',
+			headers: {
+				'X-WP-Nonce': cfg.nonce,
+				'Content-Type': 'application/json'
+			},
+			credentials: 'same-origin'
+		};
+		if (options.body) {
+			opts.body = JSON.stringify(options.body);
+		}
+		return fetch(cfg.rest + path, opts).then(function (r) {
+			if (!r.ok) {
+				throw new Error('HTTP ' + r.status);
+			}
+			return r.json();
+		});
+	}
+
+	/* ---------------- Toast ---------------- */
+	var toastEl = null;
+	function toast(msg, isError) {
+		if (!toastEl) {
+			toastEl = document.createElement('div');
+			toastEl.className = 'atg-toast';
+			document.body.appendChild(toastEl);
+		}
+		toastEl.textContent = msg;
+		toastEl.className = 'atg-toast is-visible' + (isError ? ' is-error' : '');
+		setTimeout(function () { toastEl.classList.remove('is-visible'); }, 2600);
+	}
+
+	function esc(s) {
+		return String(s == null ? '' : s)
+			.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+			.replace(/"/g, '&quot;').replace(/'/g, '&#039;');
+	}
+
+	function num(n) {
+		return (n || 0).toLocaleString();
+	}
+
+	function pill(action) {
+		var cls = action === 'allow' ? 'allow' : (action === 'block' ? 'block' : (action === 'throttle' ? 'throttle' : 'neutral'));
+		return '<span class="atg-pill atg-pill-' + cls + '">' + esc(action) + '</span>';
+	}
+
+	function verifiedPill(row) {
+		if (row.spoofed === '1' || row.spoofed === 1) {
+			return '<span class="atg-pill atg-pill-spoof">spoofed</span>';
+		}
+		if (row.verified === '1' || row.verified === 1) {
+			return '<span class="atg-pill atg-pill-yes">verified</span>';
+		}
+		if (row.verified === '0' || row.verified === 0) {
+			return '<span class="atg-pill atg-pill-no">unverified</span>';
+		}
+		return '<span class="atg-pill atg-pill-neutral">n/a</span>';
+	}
+
+	/* ---------------- Top bar: panic + resume ---------------- */
+	document.addEventListener('click', function (e) {
+		var panic = e.target.closest('[data-atg-panic]');
+		var resume = e.target.closest('[data-atg-resume]');
+		if (panic) {
+			if (!window.confirm(cfg.i18n.confirmPanic)) { return; }
+			api('mode', { method: 'POST', body: { mode: 'off' } }).then(function () {
+				toast(cfg.i18n.saved);
+				setTimeout(function () { location.reload(); }, 600);
+			}).catch(function () { toast(cfg.i18n.error, true); });
+		}
+		if (resume) {
+			var mode = resume.getAttribute('data-mode');
+			if (mode === 'active' && !window.confirm(cfg.i18n.confirmActive)) { return; }
+			api('mode', { method: 'POST', body: { mode: mode } }).then(function () {
+				toast(cfg.i18n.saved);
+				setTimeout(function () { location.reload(); }, 600);
+			}).catch(function () { toast(cfg.i18n.error, true); });
+		}
+	});
+
+	/* =========================================================
+	 * DASHBOARD
+	 * ======================================================= */
+	function initDashboard() {
+		var days = 7;
+		var seriesChart = null;
+		var purposeChart = null;
+
+		var CLASS_COLORS = {
+			human: '#059669',
+			authenticated: '#10b981',
+			allowlisted: '#34d399',
+			internal: '#6ee7b7',
+			agent_proxy: '#0ea5e9',
+			bot: '#dc2626',
+			unknown_bot: '#f97316',
+			form_abuse: '#9333ea'
+		};
+		var PURPOSE_COLORS = {
+			search_engine: '#059669',
+			ai_search: '#0ea5e9',
+			ai_training: '#dc2626',
+			agent_proxy: '#8b5cf6',
+			seo_tool: '#f59e0b',
+			social: '#ec4899',
+			feed: '#14b8a6',
+			monitor: '#6366f1',
+			scraper: '#991b1b'
+		};
+
+		function loadSummary() {
+			api('summary?days=' + days).then(function (data) {
+				// KPIs.
+				document.querySelector('[data-kpi="total"]').textContent = num(data.kpis.total);
+				document.querySelector('[data-kpi="bot_share"]').textContent = data.kpis.bot_share + '%';
+				document.querySelector('[data-kpi="blocked"]').textContent = num(data.kpis.blocked);
+				document.querySelector('[data-kpi="throttled"]').textContent = num(data.kpis.throttled);
+				document.querySelector('[data-kpi="human_eq"]').textContent = num(data.kpis.human_eq);
+				document.querySelector('[data-kpi="alerts"]').textContent = num(data.kpis.alerts);
+
+				// Shadow banner.
+				var banner = document.querySelector('[data-atg-shadow-banner]');
+				if (data.mode === 'shadow' && banner) {
+					banner.hidden = false;
+					var cd = banner.querySelector('[data-atg-shadow-countdown]');
+					if (cd && data.shadow.remaining > 0) {
+						var hrs = Math.floor(data.shadow.remaining / 3600);
+						var dLeft = Math.floor(hrs / 24);
+						cd.textContent = dLeft > 0
+							? 'Recommended observation time left: ' + dLeft + ' day(s)'
+							: 'Recommended observation time left: ' + hrs + ' hour(s)';
+					} else if (cd) {
+						cd.textContent = 'Observation period complete — you can go live whenever ready.';
+					}
+				}
+
+				renderSeries(data.series);
+				renderPurpose(data.purposes);
+				renderVendors(data.vendors);
+			}).catch(function () { toast(cfg.i18n.error, true); });
+
+			api('log?per_page=10').then(function (res) {
+				renderRecent(res.rows);
+			}).catch(function () {});
+		}
+
+		function renderSeries(series) {
+			var byDay = {};
+			var classes = {};
+			series.forEach(function (r) {
+				if (!byDay[r.day]) { byDay[r.day] = {}; }
+				byDay[r.day][r.classification] = parseInt(r.hits, 10);
+				classes[r.classification] = true;
+			});
+			var labels = Object.keys(byDay).sort();
+			var datasets = Object.keys(classes).map(function (c) {
+				return {
+					label: c.replace(/_/g, ' '),
+					data: labels.map(function (d) { return byDay[d][c] || 0; }),
+					backgroundColor: CLASS_COLORS[c] || '#94a3b8',
+					borderColor: CLASS_COLORS[c] || '#94a3b8',
+					fill: true,
+					stack: 'total',
+					tension: 0.3,
+					borderWidth: 1,
+					pointRadius: 0
+				};
+			});
+			var ctx = document.getElementById('atg-chart-series');
+			if (!ctx) { return; }
+			if (seriesChart) { seriesChart.destroy(); }
+			seriesChart = new Chart(ctx, {
+				type: 'line',
+				data: { labels: labels, datasets: datasets },
+				options: {
+					responsive: true,
+					maintainAspectRatio: false,
+					interaction: { mode: 'index', intersect: false },
+					scales: {
+						y: { stacked: true, beginAtZero: true, grid: { color: '#f1f5f9' } },
+						x: { stacked: true, grid: { display: false } }
+					},
+					plugins: { legend: { position: 'bottom', labels: { boxWidth: 12 } } }
+				}
+			});
+		}
+
+		function renderPurpose(purposes) {
+			var labels = purposes.map(function (p) { return p.purpose.replace(/_/g, ' '); });
+			var data = purposes.map(function (p) { return parseInt(p.hits, 10); });
+			var colors = purposes.map(function (p) { return PURPOSE_COLORS[p.purpose] || '#94a3b8'; });
+			var ctx = document.getElementById('atg-chart-purpose');
+			if (!ctx) { return; }
+			if (purposeChart) { purposeChart.destroy(); }
+			purposeChart = new Chart(ctx, {
+				type: 'doughnut',
+				data: { labels: labels, datasets: [{ data: data, backgroundColor: colors, borderWidth: 2, borderColor: '#fff' }] },
+				options: {
+					responsive: true,
+					maintainAspectRatio: false,
+					cutout: '62%',
+					plugins: { legend: { position: 'bottom', labels: { boxWidth: 12 } } }
+				}
+			});
+		}
+
+		function renderVendors(vendors) {
+			var tbody = document.querySelector('[data-atg-vendors] tbody');
+			if (!tbody) { return; }
+			if (!vendors.length) {
+				tbody.innerHTML = '<tr><td colspan="3" class="atg-empty">No bot traffic recorded yet.</td></tr>';
+				return;
+			}
+			var total = vendors.reduce(function (s, v) { return s + parseInt(v.hits, 10); }, 0);
+			tbody.innerHTML = vendors.map(function (v) {
+				var share = total ? Math.round((parseInt(v.hits, 10) / total) * 100) : 0;
+				return '<tr><td><strong>' + esc(v.vendor) + '</strong></td><td>' + num(parseInt(v.hits, 10)) + '</td><td>' + share + '%</td></tr>';
+			}).join('');
+		}
+
+		function renderRecent(rows) {
+			var tbody = document.querySelector('[data-atg-recent] tbody');
+			if (!tbody) { return; }
+			if (!rows.length) {
+				tbody.innerHTML = '<tr><td colspan="4" class="atg-empty">No decisions logged yet. Traffic will appear here as it arrives.</td></tr>';
+				return;
+			}
+			tbody.innerHTML = rows.map(function (r) {
+				var name = r.bot_name || (r.ua ? r.ua.substring(0, 42) : r.classification);
+				return '<tr>' +
+					'<td>' + esc(r.ts) + '</td>' +
+					'<td title="' + esc(r.ua) + '">' + esc(name) + '</td>' +
+					'<td>' + verifiedPill(r) + '</td>' +
+					'<td>' + pill(r.action) + (r.enforced === '0' ? ' <span class="atg-pill atg-pill-neutral">shadow</span>' : '') + '</td>' +
+					'</tr>';
+			}).join('');
+		}
+
+		// Range buttons.
+		document.querySelectorAll('[data-atg-range] button').forEach(function (btn) {
+			btn.addEventListener('click', function () {
+				document.querySelectorAll('[data-atg-range] button').forEach(function (b) { b.classList.remove('is-active'); });
+				btn.classList.add('is-active');
+				days = parseInt(btn.getAttribute('data-days'), 10);
+				loadSummary();
+			});
+		});
+		var refresh = document.querySelector('[data-atg-refresh]');
+		if (refresh) { refresh.addEventListener('click', loadSummary); }
+
+		loadSummary();
+		setInterval(loadSummary, 60000);
+	}
+
+	/* =========================================================
+	 * POLICY MATRIX
+	 * ======================================================= */
+	function initPolicy() {
+		var state = { matrix: {}, signatures: [], purposes: {} };
+
+		api('policy').then(function (data) {
+			state.matrix = data.matrix;
+			state.signatures = data.signatures;
+			state.purposes = data.purposes;
+			renderPresets(data.presets);
+			renderMatrix();
+		}).catch(function () { toast(cfg.i18n.error, true); });
+
+		function renderPresets(presets) {
+			var wrap = document.querySelector('[data-atg-presets]');
+			if (!wrap) { return; }
+			wrap.innerHTML = Object.keys(presets).map(function (key) {
+				var p = presets[key];
+				return '<div class="atg-preset">' +
+					'<h3>' + esc(p.label) + '</h3>' +
+					'<p>' + esc(p.description) + '</p>' +
+					'<button class="button button-primary" data-preset="' + esc(key) + '">Apply this preset</button>' +
+					'</div>';
+			}).join('');
+			wrap.querySelectorAll('[data-preset]').forEach(function (btn) {
+				btn.addEventListener('click', function () {
+					api('policy/preset', { method: 'POST', body: { preset: btn.getAttribute('data-preset') } })
+						.then(function () {
+							toast(cfg.i18n.saved);
+							return api('policy');
+						})
+						.then(function (data) {
+							state.matrix = data.matrix;
+							renderMatrix();
+						})
+						.catch(function () { toast(cfg.i18n.error, true); });
+				});
+			});
+		}
+
+		function renderMatrix() {
+			var tbody = document.querySelector('[data-atg-matrix] tbody');
+			if (!tbody) { return; }
+			tbody.innerHTML = state.signatures.map(function (sig) {
+				var vendorRow = state.matrix[sig.vendor] || {};
+				var action = vendorRow[sig.purpose] || 'allow';
+				var verify = sig.verify === 'rdns' ? 'DNS verify' : (sig.verify === 'ip_range' ? 'IP ranges' : 'Unverifiable → throttle+log');
+				return '<tr>' +
+					'<td><strong>' + esc(sig.name) + '</strong></td>' +
+					'<td>' + esc(sig.vendor) + '</td>' +
+					'<td>' + esc(state.purposes[sig.purpose] || sig.purpose) + '</td>' +
+					'<td><span class="atg-tag">' + esc(verify) + '</span></td>' +
+					'<td><select data-vendor="' + esc(sig.vendor) + '" data-purpose="' + esc(sig.purpose) + '">' +
+						['allow', 'throttle', 'block'].map(function (a) {
+							return '<option value="' + a + '"' + (a === action ? ' selected' : '') + '>' + a.charAt(0).toUpperCase() + a.slice(1) + '</option>';
+						}).join('') +
+					'</select></td>' +
+					'</tr>';
+			}).join('');
+
+			tbody.querySelectorAll('select').forEach(function (sel) {
+				sel.addEventListener('change', function () {
+					api('policy', {
+						method: 'POST',
+						body: {
+							vendor: sel.getAttribute('data-vendor'),
+							purpose: sel.getAttribute('data-purpose'),
+							action: sel.value
+						}
+					}).then(function () { toast(cfg.i18n.saved); })
+					  .catch(function () { toast(cfg.i18n.error, true); });
+				});
+			});
+		}
+	}
+
+	/* =========================================================
+	 * TRAFFIC LOG
+	 * ======================================================= */
+	function initLog() {
+		var state = { page: 1, pages: 1 };
+
+		function collectFilters() {
+			var f = {};
+			document.querySelectorAll('[data-filter]').forEach(function (el) {
+				if (el.value) { f[el.getAttribute('data-filter')] = el.value; }
+			});
+			return f;
+		}
+
+		function load() {
+			var f = collectFilters();
+			f.page = state.page;
+			var qs = Object.keys(f).map(function (k) { return k + '=' + encodeURIComponent(f[k]); }).join('&');
+			api('log?' + qs).then(function (res) {
+				state.pages = res.pages;
+				renderRows(res.rows);
+				renderPager(res);
+			}).catch(function () { toast(cfg.i18n.error, true); });
+		}
+
+		function renderRows(rows) {
+			var tbody = document.querySelector('[data-atg-log-table] tbody');
+			if (!tbody) { return; }
+			if (!rows.length) {
+				tbody.innerHTML = '<tr><td colspan="9" class="atg-empty">No matching records.</td></tr>';
+				return;
+			}
+			tbody.innerHTML = rows.map(function (r) {
+				var name = r.bot_name || (r.ua ? r.ua.substring(0, 40) : '—');
+				return '<tr>' +
+					'<td style="white-space:nowrap">' + esc(r.ts) + '</td>' +
+					'<td><span class="atg-tag">' + esc(r.classification) + '</span></td>' +
+					'<td title="' + esc(r.ua) + '">' + esc(name) + '</td>' +
+					'<td title="' + esc(r.path) + '">' + esc(r.path.substring(0, 48)) + '</td>' +
+					'<td>' + verifiedPill(r) + '</td>' +
+					'<td>' + pill(r.action) + '</td>' +
+					'<td>' + (r.enforced === '1' ? '<span class="atg-pill atg-pill-yes">yes</span>' : '<span class="atg-pill atg-pill-neutral">shadow</span>') + '</td>' +
+					'<td><code>' + esc(r.ip_display) + '</code></td>' +
+					'<td title="' + esc(r.reason) + '">' + esc((r.reason || '').substring(0, 40)) + '</td>' +
+					'</tr>';
+			}).join('');
+		}
+
+		function renderPager(res) {
+			var pager = document.querySelector('[data-atg-pagination]');
+			if (!pager) { return; }
+			var html = '';
+			for (var p = 1; p <= res.pages && p <= 12; p++) {
+				html += '<button data-page="' + p + '"' + (p === state.page ? ' class="is-active"' : '') + '>' + p + '</button>';
+			}
+			html += '<span>' + num(res.total) + ' records</span>';
+			pager.innerHTML = html;
+			pager.querySelectorAll('button').forEach(function (b) {
+				b.addEventListener('click', function () {
+					state.page = parseInt(b.getAttribute('data-page'), 10);
+					load();
+				});
+			});
+		}
+
+		var apply = document.querySelector('[data-atg-apply-filters]');
+		if (apply) {
+			apply.addEventListener('click', function () { state.page = 1; load(); });
+		}
+		var search = document.querySelector('[data-filter="search"]');
+		if (search) {
+			search.addEventListener('keydown', function (e) {
+				if (e.key === 'Enter') { state.page = 1; load(); }
+			});
+		}
+		var exp = document.querySelector('[data-atg-export]');
+		if (exp) {
+			exp.addEventListener('click', function () {
+				var f = collectFilters();
+				var qs = Object.keys(f).map(function (k) { return k + '=' + encodeURIComponent(f[k]); }).join('&');
+				window.location = cfg.rest + 'export?' + qs + '&_wpnonce=' + encodeURIComponent(cfg.nonce);
+			});
+		}
+
+		load();
+	}
+
+	/* =========================================================
+	 * ALLOWLIST
+	 * ======================================================= */
+	function initAllowlist() {
+		api('allowlist').then(function (data) {
+			document.querySelector('[data-atg-ips]').value = (data.allowlist.ips || []).join('\n');
+			document.querySelector('[data-atg-paths]').value = (data.allowlist.paths || []).join('\n');
+			document.querySelector('[data-atg-uas]').value = (data.allowlist.uas || []).join('\n');
+			var tags = document.querySelector('[data-atg-protected-paths]');
+			if (tags) {
+				tags.innerHTML = (data.protected || []).map(function (p) {
+					return '<span class="atg-tag">' + esc(p) + '</span>';
+				}).join('');
+			}
+		}).catch(function () { toast(cfg.i18n.error, true); });
+
+		var save = document.querySelector('[data-atg-save-allowlist]');
+		if (save) {
+			save.addEventListener('click', function () {
+				function lines(sel) {
+					return document.querySelector(sel).value.split('\n').map(function (s) { return s.trim(); }).filter(Boolean);
+				}
+				api('allowlist', {
+					method: 'POST',
+					body: {
+						ips: lines('[data-atg-ips]'),
+						paths: lines('[data-atg-paths]'),
+						uas: lines('[data-atg-uas]')
+					}
+				}).then(function () { toast(cfg.i18n.saved); })
+				  .catch(function () { toast(cfg.i18n.error, true); });
+			});
+		}
+	}
+
+	/* =========================================================
+	 * ALERTS
+	 * ======================================================= */
+	function initAlerts() {
+		var sel = document.querySelector('[data-atg-alert-status]');
+
+		function load() {
+			api('alerts?status=' + (sel ? sel.value : 'open')).then(function (data) {
+				render(data.alerts);
+			}).catch(function () { toast(cfg.i18n.error, true); });
+		}
+
+		function render(alerts) {
+			var wrap = document.querySelector('[data-atg-alerts-list]');
+			if (!wrap) { return; }
+			if (!alerts.length) {
+				wrap.innerHTML = '<div class="atg-empty">No alerts here. New AI bot signatures will show up automatically.</div>';
+				return;
+			}
+			wrap.innerHTML = alerts.map(function (a) {
+				var ua = a.payload && a.payload.ua ? a.payload.ua : '';
+				return '<div class="atg-alert-item ' + (a.status === 'open' ? 'is-open' : '') + '">' +
+					'<div class="atg-alert-body">' +
+						'<strong>' + esc(a.title) + '</strong>' +
+						'<span class="atg-alert-meta">' + esc(a.type) + ' · ' + esc(a.created) + ' · status: ' + esc(a.status) + '</span>' +
+						(ua ? '<div class="atg-alert-ua">' + esc(ua) + '</div>' : '') +
+					'</div>' +
+					(a.status === 'open' ? '<button class="button" data-dismiss="' + a.id + '">Dismiss</button>' : '') +
+					'</div>';
+			}).join('');
+			wrap.querySelectorAll('[data-dismiss]').forEach(function (btn) {
+				btn.addEventListener('click', function () {
+					api('alerts/' + btn.getAttribute('data-dismiss') + '/dismiss', { method: 'POST' })
+						.then(load)
+						.catch(function () { toast(cfg.i18n.error, true); });
+				});
+			});
+		}
+
+		if (sel) { sel.addEventListener('change', load); }
+		load();
+	}
+
+	/* =========================================================
+	 * SETTINGS-BACKED PAGES (protection / analytics / seo / settings)
+	 * ======================================================= */
+	function initSettingsForm() {
+		var form = document.querySelector('[data-atg-settings-form]');
+		if (!form) { return; }
+
+		api('settings').then(function (data) {
+			// Fill inputs.
+			document.querySelectorAll('[data-setting]').forEach(function (el) {
+				var key = el.getAttribute('data-setting');
+				if (!(key in data.settings)) { return; }
+				var val = data.settings[key];
+				if (el.type === 'checkbox') {
+					el.checked = !!val;
+				} else {
+					el.value = val;
+				}
+			});
+			// Environment table (settings page).
+			var env = document.querySelector('[data-atg-env] tbody');
+			if (env && data.env) {
+				var rows = [
+					['WordPress', data.env.wp],
+					['PHP', data.env.php],
+					['Multisite', data.env.multisite ? 'Yes — tables are provisioned per site' : 'No'],
+					['WooCommerce', data.env.woocommerce ? 'Active — checkout protection available' : 'Not detected'],
+					['Persistent object cache', data.env.object_cache ? 'Yes — rate-limit buckets use it' : 'No (transients in database)'],
+					['SEO plugins detected', data.env.seo_plugins.length ? data.env.seo_plugins.join(', ') + ' (robots rules are appended safely)' : 'None']
+				];
+				env.innerHTML = rows.map(function (r) {
+					return '<tr><th style="width:240px">' + esc(r[0]) + '</th><td>' + esc(r[1]) + '</td></tr>';
+				}).join('');
+			}
+		}).catch(function () { toast(cfg.i18n.error, true); });
+
+		// Robots preview (SEO page).
+		var preview = document.querySelector('[data-atg-robots-preview]');
+		if (preview) {
+			api('robots-preview').then(function (data) {
+				preview.textContent = data.rules || '(no rules — everything is set to Allow)';
+				var note = document.querySelector('[data-atg-seo-detected]');
+				if (note && data.seo_plugins.length) {
+					note.textContent = 'Detected: ' + data.seo_plugins.join(', ') + '. Rules are appended through the WordPress robots_txt filter — your SEO plugin keeps full control.';
+				}
+			}).catch(function () { preview.textContent = 'Could not load preview.'; });
+
+			var copyBtn = document.querySelector('[data-atg-copy-robots]');
+			if (copyBtn) {
+				copyBtn.addEventListener('click', function () {
+					navigator.clipboard.writeText(preview.textContent).then(function () {
+						toast('Copied to clipboard.');
+					});
+				});
+			}
+		}
+
+		// Save.
+		document.querySelectorAll('[data-atg-save-settings]').forEach(function (btn) {
+			btn.addEventListener('click', function () {
+				var body = {};
+				document.querySelectorAll('[data-setting]').forEach(function (el) {
+					var key = el.getAttribute('data-setting');
+					body[key] = el.type === 'checkbox' ? el.checked : el.value;
+				});
+				api('settings', { method: 'POST', body: body })
+					.then(function () { toast(cfg.i18n.saved); })
+					.catch(function () { toast(cfg.i18n.error, true); });
+			});
+		});
+	}
+
+	/* ---------------- Router ---------------- */
+	document.addEventListener('DOMContentLoaded', function () {
+		switch (page) {
+			case 'atg-dashboard': initDashboard(); break;
+			case 'atg-policy': initPolicy(); break;
+			case 'atg-log': initLog(); break;
+			case 'atg-allowlist': initAllowlist(); break;
+			case 'atg-alerts': initAlerts(); break;
+			case 'atg-protection':
+			case 'atg-analytics':
+			case 'atg-seo':
+			case 'atg-settings':
+				initSettingsForm();
+				break;
+		}
+	});
+})();
