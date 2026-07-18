@@ -21,12 +21,24 @@ if ( ! defined( 'ABSPATH' ) ) {
 if ( file_exists( plugin_dir_path( __FILE__ ) . 'config/branding.php' ) ) {
 	require_once plugin_dir_path( __FILE__ ) . 'config/branding.php';
 }
-define( 'ATG_VERSION', '1.0.0' );
-define( 'ATG_DB_VERSION', '1.1.0' );
-define( 'ATG_PLUGIN_FILE', __FILE__ );
-define( 'ATG_PLUGIN_DIR', plugin_dir_path( __FILE__ ) );
-define( 'ATG_PLUGIN_URL', plugin_dir_url( __FILE__ ) );
-define( 'ATG_PLUGIN_BASENAME', plugin_basename( __FILE__ ) );
+if ( ! defined( 'ATG_VERSION' ) ) {
+	define( 'ATG_VERSION', '1.0.0' );
+}
+if ( ! defined( 'ATG_DB_VERSION' ) ) {
+	define( 'ATG_DB_VERSION', '1.1.0' );
+}
+if ( ! defined( 'ATG_PLUGIN_FILE' ) ) {
+	define( 'ATG_PLUGIN_FILE', __FILE__ );
+}
+if ( ! defined( 'ATG_PLUGIN_DIR' ) ) {
+	define( 'ATG_PLUGIN_DIR', plugin_dir_path( __FILE__ ) );
+}
+if ( ! defined( 'ATG_PLUGIN_URL' ) ) {
+	define( 'ATG_PLUGIN_URL', plugin_dir_url( __FILE__ ) );
+}
+if ( ! defined( 'ATG_PLUGIN_BASENAME' ) ) {
+	define( 'ATG_PLUGIN_BASENAME', plugin_basename( __FILE__ ) );
+}
 
 /**
  * Lightweight class autoloader. Classes live in includes/ and admin/ as
@@ -34,23 +46,25 @@ define( 'ATG_PLUGIN_BASENAME', plugin_basename( __FILE__ ) );
  *
  * @param string $class Fully-qualified class name.
  */
-function atg_autoload( $class ) {
-	if ( strpos( $class, 'ATG_' ) !== 0 ) {
-		return;
-	}
-	$slug  = 'class-' . strtolower( str_replace( '_', '-', $class ) ) . '.php';
-	$paths = array(
-		ATG_PLUGIN_DIR . 'includes/' . $slug,
-		ATG_PLUGIN_DIR . 'admin/' . $slug,
-	);
-	foreach ( $paths as $path ) {
-		if ( file_exists( $path ) ) {
-			require_once $path;
+if ( ! function_exists( 'atg_autoload' ) ) {
+	function atg_autoload( $class ) {
+		if ( strpos( $class, 'ATG_' ) !== 0 ) {
 			return;
 		}
+		$slug  = 'class-' . strtolower( str_replace( '_', '-', $class ) ) . '.php';
+		$paths = array(
+			ATG_PLUGIN_DIR . 'includes/' . $slug,
+			ATG_PLUGIN_DIR . 'admin/' . $slug,
+		);
+		foreach ( $paths as $path ) {
+			if ( file_exists( $path ) ) {
+				require_once $path;
+				return;
+			}
+		}
 	}
+	spl_autoload_register( 'atg_autoload' );
 }
-spl_autoload_register( 'atg_autoload' );
 
 register_activation_hook( __FILE__, array( 'ATG_Activator', 'activate' ) );
 register_deactivation_hook( __FILE__, array( 'ATG_Deactivator', 'deactivate' ) );
@@ -58,7 +72,9 @@ register_deactivation_hook( __FILE__, array( 'ATG_Deactivator', 'deactivate' ) )
 /**
  * Boot the plugin once all plugins are loaded.
  */
-function atg_boot() {
-	ATG_Plugin::instance()->boot();
+if ( ! function_exists( 'atg_boot' ) ) {
+	function atg_boot() {
+		ATG_Plugin::instance()->boot();
+	}
+	add_action( 'plugins_loaded', 'atg_boot', 5 );
 }
-add_action( 'plugins_loaded', 'atg_boot', 5 );
