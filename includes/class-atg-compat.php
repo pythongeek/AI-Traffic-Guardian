@@ -86,20 +86,60 @@ class ATG_Compat {
 			'wp'           => get_bloginfo( 'version' ),
 		);
 
+		// Security plugin conflict detection.
 		$conflicts = array();
 		if ( class_exists( 'WordfenceLS\Controller\ActivationSetup' ) || defined( 'WORDFENCE_VERSION' ) ) {
-			$conflicts[] = 'Wordfence';
+			$conflicts[] = array(
+				'plugin'      => 'Wordfence',
+				'issue'       => 'May rate-limit ATG REST API calls from its own firewall',
+				'remediation' => 'Add /wp-json/atg/ to Wordfence allowlisted paths',
+			);
 		}
 		if ( function_exists( 'cerber_get_ip' ) || class_exists( 'Cerber_Widget' ) ) {
-			$conflicts[] = 'WP Cerber';
+			$conflicts[] = array(
+				'plugin'      => 'WP Cerber',
+				'issue'       => 'Has its own honeypot that may double-fire with ATG',
+				'remediation' => 'Disable ATG honeypot for comment forms when WP Cerber is active',
+			);
 		}
 		if ( defined( 'ITSEC_VERSION' ) || class_exists( 'ITSEC_Core' ) ) {
-			$conflicts[] = 'iThemes Security / Solid Security';
+			$conflicts[] = array(
+				'plugin'      => 'iThemes Security / Solid Security',
+				'issue'       => 'File change detection may flag ATG table creation',
+				'remediation' => 'Add ATG tables to iThemes exclusion list',
+			);
 		}
 		if ( defined( 'AIO_WP_SECURITY_VERSION' ) || class_exists( 'AIOWPSecurity_Core' ) ) {
-			$conflicts[] = 'All In One WP Security';
+			$conflicts[] = array(
+				'plugin'      => 'All In One WP Security',
+				'issue'       => 'IP blocking may conflict with ATG transient rate limiter',
+				'remediation' => 'Use ATG for bot traffic; use AIOS for brute-force login protection',
+			);
+		}
+		if ( defined( 'FLAVOR' ) && 'flavor' === FLAVOR || class_exists( 'ICWP_WPSF' ) ) {
+			$conflicts[] = array(
+				'plugin'      => 'Shield Security',
+				'issue'       => 'Has its own honeypot that may double-fire with ATG',
+				'remediation' => 'Disable ATG comment honeypot when Shield is active',
+			);
 		}
 		$report['conflicts'] = $conflicts;
+
+		// Page cache detection.
+		$caches = array();
+		if ( defined( 'WP_ROCKET_VERSION' ) ) {
+			$caches[] = 'WP Rocket';
+		}
+		if ( defined( 'LSCWP_V' ) ) {
+			$caches[] = 'LiteSpeed Cache';
+		}
+		if ( defined( 'W3TC' ) ) {
+			$caches[] = 'W3 Total Cache';
+		}
+		if ( defined( 'WPSC_VERSION' ) ) {
+			$caches[] = 'WP Super Cache';
+		}
+		$report['page_caches'] = $caches;
 
 		return $report;
 	}

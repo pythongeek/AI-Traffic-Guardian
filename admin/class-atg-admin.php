@@ -375,27 +375,26 @@ class ATG_Admin {
 			return;
 		}
 
-		foreach ( $env['conflicts'] as $plugin_name ) {
+		foreach ( $env['conflicts'] as $conflict ) {
+			$plugin_name = is_array( $conflict ) ? $conflict['plugin'] : $conflict;
 			if ( in_array( $plugin_name, $dismissed, true ) ) {
 				continue;
 			}
 
 			$remediation = '';
-			if ( 'Wordfence' === $plugin_name ) {
-				$remediation = __( 'Wordfence may rate-limit ATG REST API requests. Action: Add "/wp-json/atg/" to Wordfence allowlisted paths.', 'ai-traffic-guardian' );
-			} elseif ( 'WP Cerber' === $plugin_name ) {
-				$remediation = __( 'WP Cerber honeypot can conflict with ATG form guard. Action: Disable ATG comment/checkout honeypots or Cerber honeypots.', 'ai-traffic-guardian' );
-			} elseif ( 'iThemes Security / Solid Security' === $plugin_name ) {
-				$remediation = __( 'Solid Security file change detection may flag ATG tables. Action: Add ATG database tables to Solid Security exclusions.', 'ai-traffic-guardian' );
-			} elseif ( 'All In One WP Security' === $plugin_name ) {
-				$remediation = __( 'All In One WP Security IP rules may override ATG rate limits. Action: Use ATG for bot detection and AIOS for brute force prevention.', 'ai-traffic-guardian' );
+			if ( is_array( $conflict ) && ! empty( $conflict['remediation'] ) ) {
+				$remediation = $conflict['issue'] . ' — ' . $conflict['remediation'];
 			}
 
+			$brand_name  = defined( 'ATG_BRAND_NAME' ) ? ATG_BRAND_NAME : __( 'AI Traffic Guardian', 'ai-traffic-guardian' );
 			$dismiss_url = wp_nonce_url( add_query_arg( 'atg_dismiss_conflict', $plugin_name ), 'atg_dismiss_conflict' );
 
 			echo '<div class="notice notice-warning is-dismissible" style="position:relative;">';
-			echo '<p><strong>' . sprintf( esc_html__( 'AI Traffic Guardian conflict detected: %s', 'ai-traffic-guardian' ), esc_html( $plugin_name ) ) . '</strong></p>';
-			echo '<p>' . esc_html( $remediation ) . '</p>';
+			/* translators: 1: brand name, 2: conflicting plugin */
+			echo '<p><strong>' . sprintf( esc_html__( '%1$s conflict detected: %2$s', 'ai-traffic-guardian' ), esc_html( $brand_name ), esc_html( $plugin_name ) ) . '</strong></p>';
+			if ( $remediation ) {
+				echo '<p>' . esc_html( $remediation ) . '</p>';
+			}
 			echo '<p><a href="' . esc_url( $dismiss_url ) . '">' . esc_html__( 'Dismiss this warning', 'ai-traffic-guardian' ) . '</a></p>';
 			echo '</div>';
 		}

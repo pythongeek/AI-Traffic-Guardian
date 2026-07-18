@@ -306,6 +306,15 @@ final class ATG_Plugin {
 	public static function client_ip() {
 		$trusted_proxy = apply_filters( 'atg_trusted_proxy', false );
 		$candidates    = array();
+
+		// Cloudflare sends the real client IP in CF-Connecting-IP.
+		if ( $trusted_proxy && ! empty( $_SERVER['HTTP_CF_CONNECTING_IP'] ) ) {
+			$cf_ip = sanitize_text_field( wp_unslash( $_SERVER['HTTP_CF_CONNECTING_IP'] ) );
+			if ( filter_var( $cf_ip, FILTER_VALIDATE_IP ) ) {
+				$candidates[] = $cf_ip;
+			}
+		}
+
 		if ( $trusted_proxy && ! empty( $_SERVER['HTTP_X_FORWARDED_FOR'] ) ) {
 			$chain       = explode( ',', sanitize_text_field( wp_unslash( $_SERVER['HTTP_X_FORWARDED_FOR'] ) ) );
 			$candidates[] = trim( $chain[0] );
@@ -313,12 +322,24 @@ final class ATG_Plugin {
 		if ( ! empty( $_SERVER['REMOTE_ADDR'] ) ) {
 			$candidates[] = sanitize_text_field( wp_unslash( $_SERVER['REMOTE_ADDR'] ) );
 		}
-		foreach ( $candidates as $ip ) {
-			if ( filter_var( $ip, FILTER_VALIDATE_IP ) ) {
-				return $ip;
+
+		$ip = '0.0.0.0';
+		foreach ( $candidates as $candidate ) {
+			if ( filter_var( $candidate, FILTER_VALIDATE_IP ) ) {
+				$ip = $candidate;
+				break;
 			}
 		}
-		return '0.0.0.0';
+
+		/**
+		 * Filter the resolved client IP address.
+		 *
+		 * Useful for custom proxy setups, Cloudflare Workers, or Varnish
+		 * pass-through configurations.
+		 *
+		 * @param string $ip Resolved client IP.
+		 */
+		return apply_filters( 'atg_client_ip', $ip );
 	}
 
 	/**

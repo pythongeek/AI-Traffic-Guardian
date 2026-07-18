@@ -22,10 +22,18 @@ class ATG_Activator {
 	 */
 	public static function activate( $network_wide = false ) {
 		if ( is_multisite() && $network_wide ) {
+			/**
+			 * Filter the maximum number of sites provisioned during network activation.
+			 * Sites beyond this limit will have tables created on first admin visit
+			 * via ATG_DB::maybe_upgrade().
+			 *
+			 * @param int $limit Default 100.
+			 */
+			$limit    = (int) apply_filters( 'atg_network_activation_site_limit', 100 );
 			$site_ids = get_sites(
 				array(
 					'fields' => 'ids',
-					'number' => 100,
+					'number' => $limit,
 				)
 			);
 			foreach ( $site_ids as $site_id ) {
