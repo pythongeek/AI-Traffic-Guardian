@@ -168,6 +168,21 @@ class ATG_REST {
 			'callback' => array( __CLASS__, 'robots_preview' ),
 		) ) );
 
+		register_rest_route( self::NS, '/policy/export', array_merge( $admin, array(
+			'methods'  => 'GET',
+			'callback' => array( __CLASS__, 'export_policy' ),
+		) ) );
+
+		register_rest_route( self::NS, '/policy/import', array_merge( $admin, array(
+			'methods'  => 'POST',
+			'callback' => array( __CLASS__, 'import_policy' ),
+		) ) );
+
+		register_rest_route( self::NS, '/debug-replay', array_merge( $admin, array(
+			'methods'  => 'POST',
+			'callback' => array( __CLASS__, 'debug_replay' ),
+		) ) );
+
 		// Public beacon (rate-limited, no nonce — it only marks a session as
 		// human-confirmed; it cannot change any setting).
 		register_rest_route( self::NS, '/beacon', array(
@@ -219,6 +234,13 @@ class ATG_REST {
 			),
 			ARRAY_A
 		);
+		$countries = $wpdb->get_results(
+			$wpdb->prepare(
+				"SELECT country, SUM(hits) AS hits FROM {$stats} WHERE country != '' AND day >= %s GROUP BY country ORDER BY hits DESC LIMIT 15",
+				$from
+			),
+			ARRAY_A
+		);
 		// phpcs:enable
 
 		// KPIs.
@@ -262,6 +284,7 @@ class ATG_REST {
 				'actions'    => $action_map,
 				'purposes'   => $purposes,
 				'vendors'    => $vendors,
+				'countries'  => $countries,
 				'mode'       => $plugin->enforcement_mode(),
 				'shadow'     => array(
 					'started'   => (int) $plugin->get( 'shadow_started', 0 ),
@@ -695,5 +718,58 @@ class ATG_REST {
 			),
 			200
 		);
+	}
+
+	/**
+	 * Export policy matrix and custom signatures.
+	 */
+	public static function export_policy() {
+		$plugin = ATG_Plugin::instance();
+		$config = array(
+			'matrix'            => $plugin->policy->matrix(),
+			'custom_signatures' => $plugin->custom_signatures->get(),
+		);
+
+		header( 'Content-Type: application/json; charset=utf-8' );
+		header( 'Content-Disposition: attachment; filename="atg-policy-config.json"' );
+		echo wp_json_encode( $config, JSON_PRETTY_PRINT );
+		exit;
+	}
+
+	/**
+	 * Import policy matrix and custom signatures.
+	 */
+	public static function import_policy( WP_REST_Request $req ) {
+		$config = $req->get_json_params();
+		if ( ! is_array( $config ) ) {
+			return new WP_Error( 'atg_bad_import', __( 'Invalid import payload.', 'ai-traffic-guardian' ), array( 'status' => 400 ) );
+		}
+
+		$plugin = ATG_Plugin::instance();
+		if ( isset( $config['matrix'] ) && is_array( $config['matrix'] ) ) {
+			$plugin->policy->update_matrix( $config['matrix'] );
+		}
+		if ( isset( $config['custom_signatures'] ) && is_array( $config['custom_signatures'] ) ) {
+			$plugin->custom_signatures->update_all( $config['custom_signatures'] );
+		}
+
+		return new WP_REST_Response( array( 'ok' => true ), 200 );
+	}
+
+	/**
+	 * Replay request classification in mock mode.
+	 */
+	public static function debug_replay( WP_REST_Request $req ) {
+		$ua   = sanitize_text_field( (string) $req->get_param( 'ua' ) );
+		$ip   = sanitize_text_field( (string) $req->get_param( 'ip' ) );
+		$path = sanitize_text_field( (string) $req->get_param( 'path' ) );
+
+		$classifier = ATG_Plugin::instance()->classifier;
+		$decision = $classifier->classify( $ua, $ip, $path, true );
+
+		return new WP_REST_Response( array(
+			'ok'       => true,
+			'decision' => $decision,
+		), 200 );
 	}
 }

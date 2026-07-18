@@ -11,7 +11,7 @@ if ( ! defined( 'WP_UNINSTALL_PLUGIN' ) ) {
 }
 
 if ( ! defined( 'ATG_DB_VERSION' ) ) {
-	define( 'ATG_DB_VERSION', '1.0.0' );
+	define( 'ATG_DB_VERSION', '1.1.0' );
 }
 require_once plugin_dir_path( __FILE__ ) . 'includes/class-atg-db.php';
 

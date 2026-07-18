@@ -211,4 +211,15 @@ class ATG_Policy_Engine {
 		update_option( 'atg_policy_matrix', $presets[ $name ]['matrix'] );
 		return true;
 	}
+
+	/**
+	 * Update the entire policy matrix.
+	 *
+	 * @param array $matrix Matrix data.
+	 */
+	public function update_matrix( $matrix ) {
+		if ( is_array( $matrix ) ) {
+			update_option( 'atg_policy_matrix', $matrix );
+		}
+	}
 }

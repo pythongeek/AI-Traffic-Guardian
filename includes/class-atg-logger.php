@@ -61,9 +61,10 @@ class ATG_Logger {
 				'risk'           => (int) ( isset( $d['risk'] ) ? $d['risk'] : 0 ),
 				'is_auth'        => ! empty( $d['is_auth'] ) ? 1 : 0,
 				'session_hash'   => isset( $d['session'] ) ? substr( hash( 'sha256', $d['session'] ), 0, 64 ) : '',
+				'country'        => substr( (string) ( isset( $d['country'] ) ? $d['country'] : '' ), 0, 2 ),
 				'exec_ms'        => (int) ( isset( $d['exec_ms'] ) ? $d['exec_ms'] : 0 ),
 			),
-			array( '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%d', '%d', '%s', '%d', '%d', '%s', '%d', '%d', '%s', '%d' )
+			array( '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%d', '%d', '%s', '%d', '%d', '%s', '%d', '%d', '%s', '%s', '%d' )
 		);
 	}
 
@@ -74,31 +75,33 @@ class ATG_Logger {
 	 */
 	private function bump_stats( $d ) {
 		global $wpdb;
-		$day  = current_time( 'Y-m-d' );
-		$rows = array(
+		$day     = current_time( 'Y-m-d' );
+		$country = isset( $d['country'] ) ? substr( (string) $d['country'], 0, 2 ) : '';
+		$rows    = array(
 			// Overall bucket per classification.
-			array( 'classification' => $d['classification'], 'vendor' => '', 'purpose' => '', 'action' => '' ),
+			array( 'classification' => $d['classification'], 'vendor' => '', 'purpose' => '', 'action' => '', 'country' => $country ),
 			// Action bucket.
-			array( 'classification' => '', 'vendor' => '', 'purpose' => '', 'action' => $d['action'] ),
+			array( 'classification' => '', 'vendor' => '', 'purpose' => '', 'action' => $d['action'], 'country' => $country ),
 		);
 		if ( ! empty( $d['vendor'] ) ) {
-			$rows[] = array( 'classification' => '', 'vendor' => $d['vendor'], 'purpose' => '', 'action' => '' );
+			$rows[] = array( 'classification' => '', 'vendor' => $d['vendor'], 'purpose' => '', 'action' => '', 'country' => $country );
 		}
 		if ( ! empty( $d['purpose'] ) ) {
-			$rows[] = array( 'classification' => '', 'vendor' => '', 'purpose' => $d['purpose'], 'action' => '' );
+			$rows[] = array( 'classification' => '', 'vendor' => '', 'purpose' => $d['purpose'], 'action' => '', 'country' => $country );
 		}
 		foreach ( $rows as $r ) {
 			$wpdb->query(
 				$wpdb->prepare(
 					// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
-					'INSERT INTO ' . ATG_DB::table( 'stats' ) . ' (day, classification, vendor, purpose, action, hits)
-					 VALUES (%s, %s, %s, %s, %s, 1)
+					'INSERT INTO ' . ATG_DB::table( 'stats' ) . ' (day, classification, vendor, purpose, action, country, hits)
+					 VALUES (%s, %s, %s, %s, %s, %s, 1)
 					 ON DUPLICATE KEY UPDATE hits = hits + 1',
 					$day,
 					$r['classification'],
 					$r['vendor'],
 					$r['purpose'],
-					$r['action']
+					$r['action'],
+					$r['country']
 				)
 			);
 		}

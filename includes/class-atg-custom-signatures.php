@@ -99,4 +99,19 @@ class ATG_Custom_Signatures {
 			'custom'      => true,
 		);
 	}
+
+	public function get() {
+		return $this->get_all();
+	}
+
+	public function update_all( $sigs ) {
+		$valid_sigs = array();
+		foreach ( (array) $sigs as $sig ) {
+			$validated = $this->validate( $sig );
+			if ( ! is_wp_error( $validated ) ) {
+				$valid_sigs[] = $validated;
+			}
+		}
+		update_option( self::OPTION, $valid_sigs );
+	}
 }

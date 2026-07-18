@@ -72,13 +72,28 @@ class ATG_Classifier {
 	 *
 	 * @return array
 	 */
-	public function classify() {
+	public function classify( $mock_ua = null, $mock_ip = null, $mock_path = null, $is_mock = false ) {
 		$plugin = ATG_Plugin::instance();
-		$ip     = ATG_Plugin::client_ip();
-		$ua     = isset( $_SERVER['HTTP_USER_AGENT'] ) ? substr( sanitize_text_field( wp_unslash( $_SERVER['HTTP_USER_AGENT'] ) ), 0, 512 ) : '';
-		$path   = isset( $_SERVER['REQUEST_URI'] ) ? sanitize_text_field( wp_unslash( $_SERVER['REQUEST_URI'] ) ) : '/';
+		$ip     = null !== $mock_ip ? $mock_ip : ATG_Plugin::client_ip();
+		$ua     = null !== $mock_ua ? $mock_ua : ( isset( $_SERVER['HTTP_USER_AGENT'] ) ? substr( sanitize_text_field( wp_unslash( $_SERVER['HTTP_USER_AGENT'] ) ), 0, 512 ) : '' );
+		$path   = null !== $mock_path ? $mock_path : ( isset( $_SERVER['REQUEST_URI'] ) ? sanitize_text_field( wp_unslash( $_SERVER['REQUEST_URI'] ) ) : '/' );
 		$method = isset( $_SERVER['REQUEST_METHOD'] ) ? sanitize_text_field( wp_unslash( $_SERVER['REQUEST_METHOD'] ) ) : 'GET';
 		$session = isset( $_COOKIE['atg_sid'] ) ? sanitize_text_field( wp_unslash( $_COOKIE['atg_sid'] ) ) : '';
+
+		// Resolve country (GAP-021).
+		$country = '';
+		$headers = array(
+			'HTTP_CF_IPCOUNTRY',
+			'HTTP_X_COUNTRY_CODE',
+			'HTTP_GEOIP_COUNTRY_CODE',
+			'HTTP_X_GEO_COUNTRY',
+		);
+		foreach ( $headers as $h ) {
+			if ( ! empty( $_SERVER[ $h ] ) ) {
+				$country = strtoupper( sanitize_text_field( wp_unslash( $_SERVER[ $h ] ) ) );
+				break;
+			}
+		}
 
 		$base = array(
 			'ip'             => $ip,
@@ -98,6 +113,7 @@ class ATG_Classifier {
 			'is_auth'        => is_user_logged_in(),
 			'enforced'       => false,
 			'status_code'    => 200,
+			'country'        => substr( $country, 0, 2 ),
 		);
 
 		// 1. WP-internal automation: never classified.
@@ -146,6 +162,15 @@ class ATG_Classifier {
 			) );
 		}
 
+		// A/B Test / Experimentation bypass (GAP-023)
+		if ( preg_match( '/(Google-Optimize|Optimizely|VWO|Google-Adwords-Instant)/i', $ua ) ) {
+			return array_merge( $base, array(
+				'classification' => 'allowlisted',
+				'action'         => 'allow',
+				'reason'         => 'A/B testing / Experimentation tool bypass',
+			) );
+		}
+
 		// 5. Signature match → verification → policy.
 		$sig = $plugin->bot_db->match( $ua );
 		if ( $sig ) {
@@ -156,16 +181,18 @@ class ATG_Classifier {
 		if ( $plugin->bot_db->looks_automated( $ua ) ) {
 			$default = $plugin->get( 'default_unknown_action', 'throttle_log' );
 			$action  = 'throttle_log' === $default ? 'throttle' : $default;
-			$plugin->alerts->create(
-				'new_bot',
-				/* translators: %s user agent */
-				sprintf( __( 'New unrecognized bot user agent: %s', 'ai-traffic-guardian' ), substr( $ua, 0, 120 ) ),
-				array(
-					'ua'   => $ua,
-					'ip'   => $ip,
-					'path' => $path,
-				)
-			);
+			if ( ! $is_mock ) {
+				$plugin->alerts->create(
+					'new_bot',
+					/* translators: %s user agent */
+					sprintf( __( 'New unrecognized bot user agent: %s', 'ai-traffic-guardian' ), substr( $ua, 0, 120 ) ),
+					array(
+						'ua'   => $ua,
+						'ip'   => $ip,
+						'path' => $path,
+					)
+				);
+			}
 			$base['classification'] = 'unknown_bot';
 			$base['action']         = in_array( $action, array( 'allow', 'throttle', 'block' ), true ) ? $action : 'throttle';
 			$base['reason']         = 'Unrecognized automated UA';

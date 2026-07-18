@@ -64,13 +64,15 @@ class ATG_DB {
 			risk TINYINT(3) NOT NULL DEFAULT 0,
 			is_auth TINYINT(1) NOT NULL DEFAULT 0,
 			session_hash CHAR(64) NOT NULL DEFAULT '',
+			country CHAR(2) NOT NULL DEFAULT '',
 			exec_ms SMALLINT(5) UNSIGNED NOT NULL DEFAULT 0,
 			PRIMARY KEY  (id),
 			KEY ts (ts),
 			KEY classification (classification),
 			KEY vendor (vendor),
 			KEY action (action),
-			KEY ip_hash (ip_hash)
+			KEY ip_hash (ip_hash),
+			KEY country (country)
 		) {$charset_collate};";
 
 		$sql[] = "CREATE TABLE {$stats} (
@@ -80,9 +82,10 @@ class ATG_DB {
 			vendor VARCHAR(64) NOT NULL DEFAULT '',
 			purpose VARCHAR(32) NOT NULL DEFAULT '',
 			action VARCHAR(16) NOT NULL DEFAULT 'allow',
+			country CHAR(2) NOT NULL DEFAULT '',
 			hits BIGINT(20) UNSIGNED NOT NULL DEFAULT 0,
 			PRIMARY KEY  (id),
-			UNIQUE KEY bucket (day, classification, vendor, purpose, action),
+			UNIQUE KEY bucket (day, classification, vendor, purpose, action, country),
 			KEY day (day)
 		) {$charset_collate};";
 

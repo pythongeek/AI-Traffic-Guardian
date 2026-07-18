@@ -96,9 +96,14 @@ class ATG_Llms {
 		$lines[] = '';
 		$lines[] = '## Content';
 
+		$post_types = array( 'post', 'page' );
+		if ( class_exists( 'WooCommerce' ) ) {
+			$post_types[] = 'product';
+		}
+
 		$posts = get_posts(
 			array(
-				'post_type'      => apply_filters( 'atg_llms_post_types', array( 'post', 'page' ) ),
+				'post_type'      => apply_filters( 'atg_llms_post_types', $post_types ),
 				'posts_per_page' => (int) $plugin->get( 'llms_posts', 20 ),
 				'post_status'    => 'publish',
 				'orderby'        => 'date',

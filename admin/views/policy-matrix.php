@@ -22,6 +22,22 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 	<div class="atg-card">
 		<div class="atg-card-head">
+			<h2><?php esc_html_e( 'Export / Import Policy Configuration', 'ai-traffic-guardian' ); ?></h2>
+			<p class="description"><?php esc_html_e( 'Backup or restore your full policy matrix settings and custom signatures.', 'ai-traffic-guardian' ); ?></p>
+		</div>
+		<div style="display: flex; gap: 15px; align-items: center; padding: 10px 0;">
+			<button type="button" class="button" id="atg-export-policy-btn">
+				<span class="dashicons dashicons-upload"></span> <?php esc_html_e( 'Export Configuration JSON', 'ai-traffic-guardian' ); ?>
+			</button>
+			<label class="button" style="cursor: pointer;">
+				<span class="dashicons dashicons-download"></span> <?php esc_html_e( 'Import Configuration JSON', 'ai-traffic-guardian' ); ?>
+				<input type="file" id="atg-import-policy-file" accept=".json" style="display: none;" />
+			</label>
+		</div>
+	</div>
+
+	<div class="atg-card">
+		<div class="atg-card-head">
 			<h2><?php esc_html_e( 'Granular policy matrix', 'ai-traffic-guardian' ); ?></h2>
 			<p class="description"><?php esc_html_e( 'Vendor × purpose control. Changes save instantly and feed both the enforcement engine and robots.txt.', 'ai-traffic-guardian' ); ?></p>
 		</div>

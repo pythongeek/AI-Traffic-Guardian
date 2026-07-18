@@ -51,9 +51,10 @@ if ( ! defined( 'ABSPATH' ) ) {
 						<th><?php esc_html_e( 'Enforced', 'ai-traffic-guardian' ); ?></th>
 						<th><?php esc_html_e( 'IP', 'ai-traffic-guardian' ); ?></th>
 						<th><?php esc_html_e( 'Reason', 'ai-traffic-guardian' ); ?></th>
+						<th><?php esc_html_e( 'Actions', 'ai-traffic-guardian' ); ?></th>
 					</tr>
 				</thead>
-				<tbody><tr><td colspan="9" class="atg-empty"><?php esc_html_e( 'Loading…', 'ai-traffic-guardian' ); ?></td></tr></tbody>
+				<tbody><tr><td colspan="10" class="atg-empty"><?php esc_html_e( 'Loading…', 'ai-traffic-guardian' ); ?></td></tr></tbody>
 			</table>
 		</div>
 		<div class="atg-pagination" data-atg-pagination></div>

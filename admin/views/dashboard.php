@@ -120,21 +120,37 @@ if ( ! defined( 'ABSPATH' ) ) {
 			</div>
 			<div class="atg-card">
 				<div class="atg-card-head">
-					<h2><?php esc_html_e( 'Latest decisions', 'ai-traffic-guardian' ); ?></h2>
-					<a href="<?php echo esc_url( admin_url( 'admin.php?page=atg-log' ) ); ?>" class="atg-link"><?php esc_html_e( 'View full log', 'ai-traffic-guardian' ); ?></a>
+					<h2><?php esc_html_e( 'Bot Traffic Origins (Country)', 'ai-traffic-guardian' ); ?></h2>
 				</div>
-				<table class="atg-table" data-atg-recent>
+				<table class="atg-table" data-atg-countries>
 					<thead>
 						<tr>
-							<th><?php esc_html_e( 'Time', 'ai-traffic-guardian' ); ?></th>
-							<th><?php esc_html_e( 'Bot', 'ai-traffic-guardian' ); ?></th>
-							<th><?php esc_html_e( 'Verified', 'ai-traffic-guardian' ); ?></th>
-							<th><?php esc_html_e( 'Decision', 'ai-traffic-guardian' ); ?></th>
+							<th><?php esc_html_e( 'Country', 'ai-traffic-guardian' ); ?></th>
+							<th><?php esc_html_e( 'Requests', 'ai-traffic-guardian' ); ?></th>
+							<th><?php esc_html_e( 'Share', 'ai-traffic-guardian' ); ?></th>
 						</tr>
 					</thead>
-					<tbody><tr><td colspan="4" class="atg-empty"><?php esc_html_e( 'Loading…', 'ai-traffic-guardian' ); ?></td></tr></tbody>
+					<tbody><tr><td colspan="3" class="atg-empty"><?php esc_html_e( 'Loading…', 'ai-traffic-guardian' ); ?></td></tr></tbody>
 				</table>
 			</div>
+		</div>
+
+		<div class="atg-card" style="margin-top:20px; margin-bottom:20px;">
+			<div class="atg-card-head">
+				<h2><?php esc_html_e( 'Latest decisions', 'ai-traffic-guardian' ); ?></h2>
+				<a href="<?php echo esc_url( admin_url( 'admin.php?page=atg-log' ) ); ?>" class="atg-link"><?php esc_html_e( 'View full log', 'ai-traffic-guardian' ); ?></a>
+			</div>
+			<table class="atg-table" data-atg-recent>
+				<thead>
+					<tr>
+						<th><?php esc_html_e( 'Time', 'ai-traffic-guardian' ); ?></th>
+						<th><?php esc_html_e( 'Bot', 'ai-traffic-guardian' ); ?></th>
+						<th><?php esc_html_e( 'Verified', 'ai-traffic-guardian' ); ?></th>
+						<th><?php esc_html_e( 'Decision', 'ai-traffic-guardian' ); ?></th>
+					</tr>
+				</thead>
+				<tbody><tr><td colspan="4" class="atg-empty"><?php esc_html_e( 'Loading…', 'ai-traffic-guardian' ); ?></td></tr></tbody>
+			</table>
 		</div>
 
 		<div class="atg-card atg-next-steps">

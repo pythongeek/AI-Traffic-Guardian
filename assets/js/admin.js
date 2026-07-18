@@ -153,6 +153,7 @@
 				renderSeries(data.series);
 				renderPurpose(data.purposes);
 				renderVendors(data.vendors);
+				renderCountries(data.countries || []);
 				calculateCostAndBandwidth();
 
 				if (data.shadow_snapshot && data.shadow_snapshot.total > 0 && data.mode !== 'shadow') {
@@ -285,6 +286,21 @@
 			}).join('');
 		}
 
+		function renderCountries(countries) {
+			var tbody = document.querySelector('[data-atg-countries] tbody');
+			if (!tbody) { return; }
+			if (!countries.length) {
+				tbody.innerHTML = '<tr><td colspan="3" class="atg-empty">No geographical traffic recorded yet.</td></tr>';
+				return;
+			}
+			var total = countries.reduce(function (s, v) { return s + parseInt(v.hits, 10); }, 0);
+			tbody.innerHTML = countries.map(function (c) {
+				var share = total ? Math.round((parseInt(c.hits, 10) / total) * 100) : 0;
+				var name = c.country === 'unknown' || !c.country ? 'Unknown' : c.country;
+				return '<tr><td><strong>' + esc(name) + '</strong></td><td>' + num(parseInt(c.hits, 10)) + '</td><td>' + share + '%</td></tr>';
+			}).join('');
+		}
+
 		function renderRecent(rows) {
 			var tbody = document.querySelector('[data-atg-recent] tbody');
 			if (!tbody) { return; }
@@ -358,6 +374,41 @@
 			initCustomSignaturesForm();
 			loadCustomSignatures();
 		}).catch(function () { toast(cfg.i18n.error, true); });
+
+		// Export
+		var exportBtn = document.getElementById('atg-export-policy-btn');
+		if (exportBtn) {
+			exportBtn.addEventListener('click', function () {
+				window.location = cfg.rest + 'policy/export?_wpnonce=' + encodeURIComponent(cfg.nonce);
+			});
+		}
+
+		// Import
+		var importFile = document.getElementById('atg-import-policy-file');
+		if (importFile) {
+			importFile.addEventListener('change', function (e) {
+				var file = e.target.files[0];
+				if (!file) return;
+				var reader = new FileReader();
+				reader.onload = function (evt) {
+					try {
+						var config = JSON.parse(evt.target.result);
+						api('policy/import', {
+							method: 'POST',
+							body: config
+						}).then(function () {
+							toast(cfg.i18n.saved);
+							reloadAll();
+						}).catch(function () {
+							toast(cfg.i18n.error, true);
+						});
+					} catch (ex) {
+						toast('Invalid JSON file.', true);
+					}
+				};
+				reader.readAsText(file);
+			});
+		}
 
 		function initCustomSignaturesForm() {
 			var purposeSel = document.getElementById('atg-sig-purpose');
@@ -635,10 +686,10 @@
 			var tbody = document.querySelector('[data-atg-log-table] tbody');
 			if (!tbody) { return; }
 			if (!rows.length) {
-				tbody.innerHTML = '<tr><td colspan="9" class="atg-empty">No matching records.</td></tr>';
+				tbody.innerHTML = '<tr><td colspan="10" class="atg-empty">No matching records.</td></tr>';
 				return;
 			}
-			tbody.innerHTML = rows.map(function (r) {
+			tbody.innerHTML = rows.map(function (r, idx) {
 				var name = r.bot_name || (r.ua ? r.ua.substring(0, 40) : '—');
 				return '<tr>' +
 					'<td style="white-space:nowrap">' + esc(r.ts) + '</td>' +
@@ -650,8 +701,35 @@
 					'<td>' + (r.enforced === '1' ? '<span class="atg-pill atg-pill-yes">yes</span>' : '<span class="atg-pill atg-pill-neutral">shadow</span>') + '</td>' +
 					'<td><code>' + esc(r.ip_display) + '</code></td>' +
 					'<td title="' + esc(r.reason) + '">' + esc((r.reason || '').substring(0, 40)) + '</td>' +
+					'<td><button type="button" class="button atg-replay-btn" data-idx="' + idx + '">Replay</button></td>' +
 					'</tr>';
 			}).join('');
+
+			tbody.querySelectorAll('.atg-replay-btn').forEach(function (btn) {
+				btn.addEventListener('click', function () {
+					var idx = parseInt(btn.getAttribute('data-idx'), 10);
+					var row = rows[idx];
+					api('debug-replay', {
+						method: 'POST',
+						body: {
+							ua: row.ua,
+							ip: row.ip || '',
+							path: row.path
+						}
+					}).then(function (res) {
+						var dec = res.decision;
+						var msg = 'Replay Results:\n' +
+							'Classification: ' + dec.classification + '\n' +
+							'Action: ' + dec.action + '\n' +
+							'Reason: ' + dec.reason + '\n' +
+							'Status: ' + dec.status_code + '\n' +
+							'Risk: ' + dec.risk + '%';
+						alert(msg);
+					}).catch(function () {
+						toast('Replay failed.', true);
+					});
+				});
+			});
 		}
 
 		function renderPager(res) {
