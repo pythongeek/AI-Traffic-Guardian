@@ -140,8 +140,11 @@ final class ATG_Plugin {
 		$this->llms         = new ATG_Llms();
 		$this->compat       = new ATG_Compat();
 
-		// Schema maintenance (admin side only, cheap version compare).
-		add_action( 'admin_init', array( 'ATG_DB', 'maybe_upgrade' ) );
+		// Schema self-healing: run on every boot so REST requests and front-end
+		// pages always have tables available, even if activation failed earlier.
+		// The version compare reads from WP's option cache — effectively free
+		// after the first request of a process.
+		ATG_DB::maybe_upgrade();
 
 		// Front-end request classification & enforcement. Runs early, after
 		// pluggable functions (auth) are available.
