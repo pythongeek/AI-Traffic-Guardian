@@ -62,6 +62,10 @@ class ATG_Robots {
 				continue;
 			}
 
+			if ( ! in_array( $sig['purpose'], array( 'ai_training', 'ai_search', 'seo_tool', 'search_engine' ), true ) ) {
+				continue;
+			}
+
 			$agent = $this->ua_token( $sig['name'] );
 			if ( '' === $agent ) {
 				continue;
