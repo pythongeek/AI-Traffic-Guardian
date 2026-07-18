@@ -33,9 +33,23 @@ class ATG_Classifier {
 	 * Entry point on `init` (priority 1).
 	 */
 	public function handle_request() {
-		// Never classify wp-admin screens, login page GETs handled by form
-		// guard, or the plugin's own beacon endpoint.
+		// Never classify wp-admin screens (login page GETs handled by form guard).
 		if ( is_admin() && ! ( defined( 'DOING_AJAX' ) && DOING_AJAX ) ) {
+			return;
+		}
+
+		// Never classify REST API requests — WordPress handles REST authentication
+		// via its own permission_callback pipeline (rest_authentication_errors /
+		// rest_api_init), which fires after init.  Running the classifier here at
+		// init priority 1 means REST_REQUEST is true but auth is not yet confirmed,
+		// so we would produce noisy stats and could trigger DB errors on a fresh
+		// install before the REST response even begins.
+		if ( defined( 'REST_REQUEST' ) && REST_REQUEST ) {
+			return;
+		}
+
+		// Never classify WP-Cron jobs.
+		if ( function_exists( 'wp_doing_cron' ) && wp_doing_cron() ) {
 			return;
 		}
 
