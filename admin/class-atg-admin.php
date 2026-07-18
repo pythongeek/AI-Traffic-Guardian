@@ -41,6 +41,7 @@ class ATG_Admin {
 		add_action( 'network_admin_menu', array( $this, 'network_menu' ) );
 		add_action( 'admin_enqueue_scripts', array( $this, 'assets' ) );
 		add_filter( 'plugin_action_links_' . ATG_PLUGIN_BASENAME, array( $this, 'action_links' ) );
+		add_filter( 'plugin_row_meta', array( $this, 'row_meta' ), 10, 2 );
 		add_action( 'admin_notices', array( $this, 'conflict_notices' ) );
 	}
 
@@ -51,13 +52,17 @@ class ATG_Admin {
 		$alerts = ATG_Plugin::instance()->alerts->open_count();
 		$badge  = $alerts ? ' <span class="awaiting-mod">' . (int) $alerts . '</span>' : '';
 
+		$page_title = defined( 'ATG_BRAND_NAME' ) ? ATG_BRAND_NAME : __( 'AI Traffic Guardian', 'ai-traffic-guardian' );
+		$menu_title = defined( 'ATG_BRAND_NAME' ) ? ATG_BRAND_NAME : __( 'Traffic Guardian', 'ai-traffic-guardian' );
+		$icon       = defined( 'ATG_BRAND_ICON' ) ? ATG_BRAND_ICON : 'dashicons-shield-alt';
+
 		add_menu_page(
-			__( 'AI Traffic Guardian', 'ai-traffic-guardian' ),
-			__( 'Traffic Guardian', 'ai-traffic-guardian' ) . $badge,
+			$page_title,
+			$menu_title . $badge,
 			'atg_view_reports',
 			'atg-dashboard',
 			array( $this, 'render' ),
-			'dashicons-shield-alt',
+			$icon,
 			58
 		);
 		foreach ( self::pages() as $slug => $page ) {
@@ -83,6 +88,18 @@ class ATG_Admin {
 			return;
 		}
 		wp_enqueue_style( 'atg-admin', ATG_PLUGIN_URL . 'assets/css/admin.css', array(), ATG_VERSION );
+
+		// Inject inline branding color overrides when config/branding.php defines them.
+		$overrides = '';
+		if ( defined( 'ATG_BRAND_COLOR_PRIMARY' ) ) {
+			$overrides .= '--atg-brand:' . esc_attr( ATG_BRAND_COLOR_PRIMARY ) . ';';
+		}
+		if ( defined( 'ATG_BRAND_COLOR_DARK' ) ) {
+			$overrides .= '--atg-topbar-start:' . esc_attr( ATG_BRAND_COLOR_DARK ) . ';';
+		}
+		if ( $overrides ) {
+			wp_add_inline_style( 'atg-admin', '.atg-wrap{' . $overrides . '}' );
+		}
 		wp_enqueue_script( 'atg-chart', ATG_PLUGIN_URL . 'assets/js/vendor/chart.umd.min.js', array(), '4.4.3', true );
 		wp_enqueue_script( 'atg-admin', ATG_PLUGIN_URL . 'assets/js/admin.js', array( 'atg-chart' ), ATG_VERSION, true );
 		wp_localize_script(
@@ -121,6 +138,10 @@ class ATG_Admin {
 		if ( file_exists( $file ) ) {
 			include $file;
 		}
+		if ( ! defined( 'ATG_BRAND_HIDE_CREDITS' ) || ! ATG_BRAND_HIDE_CREDITS ) {
+			echo '<p class="atg-footer-credit">' . esc_html__( 'Powered by AI Traffic Guardian', 'ai-traffic-guardian' ) . '</p>';
+		}
+		do_action( 'atg_dashboard_footer' );
 		echo '</div>';
 	}
 
@@ -130,9 +151,12 @@ class ATG_Admin {
 	 * @param string $slug Current page slug.
 	 */
 	private function render_topbar( $slug ) {
-		$plugin = ATG_Plugin::instance();
-		$mode   = $plugin->enforcement_mode();
-		$labels = array(
+		$plugin     = ATG_Plugin::instance();
+		$mode       = $plugin->enforcement_mode();
+		$brand_name = defined( 'ATG_BRAND_NAME' ) ? ATG_BRAND_NAME : __( 'AI Traffic Guardian', 'ai-traffic-guardian' );
+		$logo_url   = defined( 'ATG_BRAND_LOGO_URL' ) ? ATG_BRAND_LOGO_URL : '';
+		$icon_class = defined( 'ATG_BRAND_ICON' ) ? ATG_BRAND_ICON : 'dashicons-shield-alt';
+		$labels     = array(
 			'shadow' => __( 'Shadow mode — observing only', 'ai-traffic-guardian' ),
 			'active' => __( 'Active enforcement', 'ai-traffic-guardian' ),
 			'off'    => __( 'Protection paused', 'ai-traffic-guardian' ),
@@ -140,9 +164,13 @@ class ATG_Admin {
 		?>
 		<div class="atg-topbar">
 			<div class="atg-brand">
-				<span class="dashicons dashicons-shield-alt"></span>
+				<?php if ( $logo_url ) : ?>
+					<img src="<?php echo esc_url( $logo_url ); ?>" height="32" alt="<?php echo esc_attr( $brand_name ); ?>" />
+				<?php else : ?>
+					<span class="dashicons <?php echo esc_attr( $icon_class ); ?>"></span>
+				<?php endif; ?>
 				<div>
-					<strong><?php esc_html_e( 'AI Traffic Guardian', 'ai-traffic-guardian' ); ?></strong>
+					<strong><?php echo esc_html( $brand_name ); ?></strong>
 					<span class="atg-version">v<?php echo esc_html( ATG_VERSION ); ?></span>
 				</div>
 			</div>
@@ -173,6 +201,26 @@ class ATG_Admin {
 	public function action_links( $links ) {
 		$url = admin_url( 'admin.php?page=atg-dashboard' );
 		array_unshift( $links, '<a href="' . esc_url( $url ) . '">' . esc_html__( 'Dashboard', 'ai-traffic-guardian' ) . '</a>' );
+		return $links;
+	}
+
+	/**
+	 * Plugin row meta: support & docs links.
+	 *
+	 * @param array  $links Existing meta links.
+	 * @param string $file  Plugin basename.
+	 * @return array
+	 */
+	public function row_meta( $links, $file ) {
+		if ( strpos( $file, 'ai-traffic-guardian.php' ) === false ) {
+			return $links;
+		}
+		if ( defined( 'ATG_BRAND_SUPPORT_URL' ) && ATG_BRAND_SUPPORT_URL ) {
+			$links[] = '<a href="' . esc_url( ATG_BRAND_SUPPORT_URL ) . '">' . esc_html__( 'Support', 'ai-traffic-guardian' ) . '</a>';
+		}
+		if ( defined( 'ATG_BRAND_DOCS_URL' ) && ATG_BRAND_DOCS_URL ) {
+			$links[] = '<a href="' . esc_url( ATG_BRAND_DOCS_URL ) . '">' . esc_html__( 'Documentation', 'ai-traffic-guardian' ) . '</a>';
+		}
 		return $links;
 	}
 

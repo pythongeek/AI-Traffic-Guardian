@@ -18,7 +18,9 @@
 if ( ! defined( 'ABSPATH' ) ) {
 	exit; // No direct access.
 }
-
+if ( file_exists( plugin_dir_path( __FILE__ ) . 'config/branding.php' ) ) {
+	require_once plugin_dir_path( __FILE__ ) . 'config/branding.php';
+}
 define( 'ATG_VERSION', '1.0.0' );
 define( 'ATG_DB_VERSION', '1.1.0' );
 define( 'ATG_PLUGIN_FILE', __FILE__ );

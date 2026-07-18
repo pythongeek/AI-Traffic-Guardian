@@ -17,6 +17,10 @@
 	--atg-red: #dc2626;
 	--atg-red-soft: #fef2f2;
 	--atg-radius: 12px;
+	/* Topbar gradient — override via config/branding.php + inline style or separate CSS */
+	--atg-topbar-start: #1e1b4b;
+	--atg-topbar-mid:   #312e81;
+	--atg-topbar-end:   #4338ca;
 	margin: 16px 20px 0 0;
 	max-width: 1280px;
 	font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
@@ -31,7 +35,7 @@
 	gap: 16px;
 	padding: 14px 20px;
 	margin-bottom: 18px;
-	background: linear-gradient(120deg, #1e1b4b 0%, #312e81 55%, #4338ca 100%);
+	background: linear-gradient(120deg, var(--atg-topbar-start) 0%, var(--atg-topbar-mid) 55%, var(--atg-topbar-end) 100%);
 	border-radius: var(--atg-radius);
 	color: #fff;
 	box-shadow: 0 10px 30px rgba(49, 46, 129, .25);
@@ -48,6 +52,11 @@
 	width: 30px;
 	height: 30px;
 	color: #a5b4fc;
+}
+.atg-brand img {
+	height: 32px;
+	width: auto;
+	object-fit: contain;
 }
 .atg-version {
 	display: block;
@@ -360,3 +369,24 @@
 }
 .atg-toast.is-visible { opacity: 1; transform: translateY(0); }
 .atg-toast.is-error { background: var(--atg-red); }
+
+/* ---------- Footer credit ---------- */
+.atg-footer-credit {
+	text-align: center;
+	color: var(--atg-muted);
+	font-size: 12px;
+	margin: 24px 0 8px;
+}
+.atg-footer {
+	text-align: center;
+	color: var(--atg-muted);
+	font-size: 13px;
+	margin: 8px 0 12px;
+}
+.atg-footer a {
+	color: var(--atg-brand);
+	text-decoration: none;
+}
+.atg-footer a:hover {
+	text-decoration: underline;
+}
