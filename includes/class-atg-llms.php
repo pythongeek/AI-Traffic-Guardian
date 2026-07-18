@@ -64,7 +64,7 @@ class ATG_Llms {
 		header( 'Content-Type: text/plain; charset=utf-8', true );
 		header( 'X-Robots-Tag: noindex', true );
 		// Plain-text response: no HTML escaping (Content-Type prevents markup parsing).
-		echo $this->render(); // phpcs:ignore WordPress.Security.EscapeOutput
+		echo apply_filters( 'atg_llms_content', $this->render() ); // phpcs:ignore WordPress.Security.EscapeOutput
 		exit;
 	}
 
