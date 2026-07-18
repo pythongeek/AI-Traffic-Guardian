@@ -90,13 +90,10 @@ class ATG_Alerts {
 	 */
 	public function list( $status = 'open', $limit = 100 ) {
 		global $wpdb;
-		$table = ATG_DB::table( 'alerts' );
 		if ( 'all' === $status ) {
-			// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
-			return $wpdb->get_results( $wpdb->prepare( "SELECT * FROM {$table} ORDER BY id DESC LIMIT %d", (int) $limit ), ARRAY_A );
+			return $wpdb->get_results( $wpdb->prepare( 'SELECT * FROM %i ORDER BY id DESC LIMIT %d', ATG_DB::table( 'alerts' ), (int) $limit ), ARRAY_A );
 		}
-		// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
-		return $wpdb->get_results( $wpdb->prepare( "SELECT * FROM {$table} WHERE status = %s ORDER BY id DESC LIMIT %d", $status, (int) $limit ), ARRAY_A );
+		return $wpdb->get_results( $wpdb->prepare( 'SELECT * FROM %i WHERE status = %s ORDER BY id DESC LIMIT %d', ATG_DB::table( 'alerts' ), $status, (int) $limit ), ARRAY_A );
 	}
 
 	/**
@@ -116,8 +113,7 @@ class ATG_Alerts {
 	 */
 	public function open_count() {
 		global $wpdb;
-		// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
-		return (int) $wpdb->get_var( "SELECT COUNT(*) FROM " . ATG_DB::table( 'alerts' ) . " WHERE status = 'open'" );
+		return (int) $wpdb->get_var( $wpdb->prepare( 'SELECT COUNT(*) FROM %i WHERE status = %s', ATG_DB::table( 'alerts' ), 'open' ) );
 	}
 
 	/**

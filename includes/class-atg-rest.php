@@ -204,44 +204,47 @@ class ATG_REST {
 		$days  = min( 90, max( 1, (int) $req->get_param( 'days' ) ?: 7 ) );
 		$from  = gmdate( 'Y-m-d', strtotime( current_time( 'Y-m-d' ) . " -{$days} days" ) );
 
-		// phpcs:disable WordPress.DB.PreparedSQL.InterpolatedNotPrepared
 		$series = $wpdb->get_results(
 			$wpdb->prepare(
-				"SELECT day, classification, SUM(hits) AS hits FROM {$stats}
-				 WHERE classification != '' AND day >= %s GROUP BY day, classification ORDER BY day ASC",
+				'SELECT day, classification, SUM(hits) AS hits FROM %i
+				 WHERE classification != \'\' AND day >= %s GROUP BY day, classification ORDER BY day ASC',
+				ATG_DB::table( 'stats' ),
 				$from
 			),
 			ARRAY_A
 		);
 		$actions = $wpdb->get_results(
 			$wpdb->prepare(
-				"SELECT action, SUM(hits) AS hits FROM {$stats} WHERE action != '' AND day >= %s GROUP BY action",
+				'SELECT action, SUM(hits) AS hits FROM %i WHERE action != \'\' AND day >= %s GROUP BY action',
+				ATG_DB::table( 'stats' ),
 				$from
 			),
 			ARRAY_A
 		);
 		$purposes = $wpdb->get_results(
 			$wpdb->prepare(
-				"SELECT purpose, SUM(hits) AS hits FROM {$stats} WHERE purpose != '' AND day >= %s GROUP BY purpose ORDER BY hits DESC",
+				'SELECT purpose, SUM(hits) AS hits FROM %i WHERE purpose != \'\' AND day >= %s GROUP BY purpose ORDER BY hits DESC',
+				ATG_DB::table( 'stats' ),
 				$from
 			),
 			ARRAY_A
 		);
 		$vendors = $wpdb->get_results(
 			$wpdb->prepare(
-				"SELECT vendor, SUM(hits) AS hits FROM {$stats} WHERE vendor != '' AND day >= %s GROUP BY vendor ORDER BY hits DESC LIMIT 10",
+				'SELECT vendor, SUM(hits) AS hits FROM %i WHERE vendor != \'\' AND day >= %s GROUP BY vendor ORDER BY hits DESC LIMIT 10',
+				ATG_DB::table( 'stats' ),
 				$from
 			),
 			ARRAY_A
 		);
 		$countries = $wpdb->get_results(
 			$wpdb->prepare(
-				"SELECT country, SUM(hits) AS hits FROM {$stats} WHERE country != '' AND day >= %s GROUP BY country ORDER BY hits DESC LIMIT 15",
+				'SELECT country, SUM(hits) AS hits FROM %i WHERE country != \'\' AND day >= %s GROUP BY country ORDER BY hits DESC LIMIT 15',
+				ATG_DB::table( 'stats' ),
 				$from
 			),
 			ARRAY_A
 		);
-		// phpcs:enable
 
 		// KPIs.
 		$total    = 0;
@@ -485,7 +488,8 @@ class ATG_REST {
 
 			$rows = $wpdb->get_results(
 				$wpdb->prepare(
-					"SELECT classification, SUM(hits) AS hits FROM {$stats} WHERE day >= %s GROUP BY classification",
+					'SELECT classification, SUM(hits) AS hits FROM %i WHERE day >= %s GROUP BY classification',
+					ATG_DB::table( 'stats' ),
 					$from_date
 				),
 				ARRAY_A

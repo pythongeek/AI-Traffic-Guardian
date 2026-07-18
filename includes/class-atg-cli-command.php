@@ -5,7 +5,10 @@
  * @package AI_Traffic_Guardian
  */
 
-if ( ! defined( 'ABSPATH' ) || ! defined( 'WP_CLI' ) || ! WP_CLI ) {
+if ( ! defined( 'ABSPATH' ) ) {
+	exit;
+}
+if ( ! defined( 'WP_CLI' ) || ! WP_CLI ) {
 	exit;
 }
 
@@ -77,7 +80,8 @@ class ATG_CLI_Command {
 		$from  = gmdate( 'Y-m-d', strtotime( "-{$days} days" ) );
 		$rows  = $wpdb->get_results(
 			$wpdb->prepare(
-				"SELECT vendor, SUM(hits) AS total FROM {$stats} WHERE vendor != '' AND day >= %s GROUP BY vendor ORDER BY total DESC LIMIT 20",
+				'SELECT vendor, SUM(hits) AS total FROM %i WHERE vendor != \'\' AND day >= %s GROUP BY vendor ORDER BY total DESC LIMIT 20',
+				ATG_DB::table( 'stats' ),
 				$from
 			),
 			ARRAY_A

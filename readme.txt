@@ -1,8 +1,8 @@
 === AI Traffic Guardian ===
 Contributors: aitrafficguardian
-Tags: ai bots, bot protection, ai crawlers, woocommerce, analytics, gptbot, claudebot, robots.txt, spam
+Tags: ai bots, bot protection, ai crawlers, woocommerce, analytics
 Requires at least: 6.0
-Tested up to: 6.8
+Tested up to: 7.0
 Requires PHP: 7.4
 Stable tag: 1.0.0
 License: GPLv2 or later

@@ -92,10 +92,10 @@ class ATG_Logger {
 		foreach ( $rows as $r ) {
 			$wpdb->query(
 				$wpdb->prepare(
-					// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
-					'INSERT INTO ' . ATG_DB::table( 'stats' ) . ' (day, classification, vendor, purpose, action, country, hits)
+					'INSERT INTO %i (day, classification, vendor, purpose, action, country, hits)
 					 VALUES (%s, %s, %s, %s, %s, %s, 1)
 					 ON DUPLICATE KEY UPDATE hits = hits + 1',
+					ATG_DB::table( 'stats' ),
 					$day,
 					$r['classification'],
 					$r['vendor'],
@@ -150,18 +150,37 @@ class ATG_Logger {
 		$page     = isset( $args['page'] ) ? max( 1, (int) $args['page'] ) : 1;
 		$offset   = ( $page - 1 ) * $per_page;
 
-		// phpcs:disable WordPress.DB.PreparedSQL.InterpolatedNotPrepared
-		$total = (int) $wpdb->get_var(
-			$wpdb->prepare( "SELECT COUNT(*) FROM {$table} WHERE {$where_sql}", $params )
-		);
-		$rows  = $wpdb->get_results(
-			$wpdb->prepare(
-				"SELECT * FROM {$table} WHERE {$where_sql} ORDER BY id DESC LIMIT %d OFFSET %d",
-				array_merge( $params, array( $per_page, $offset ) )
-			),
-			ARRAY_A
-		);
-		// phpcs:enable
+		if ( $params ) {
+			$total = (int) $wpdb->get_var(
+				$wpdb->prepare(
+					"SELECT COUNT(*) FROM %i WHERE {$where_sql}",
+					array_merge( array( $table ), $params )
+				)
+			);
+			$rows  = $wpdb->get_results(
+				$wpdb->prepare(
+					"SELECT * FROM %i WHERE {$where_sql} ORDER BY id DESC LIMIT %d OFFSET %d",
+					array_merge( array( $table ), $params, array( $per_page, $offset ) )
+				),
+				ARRAY_A
+			);
+		} else {
+			$total = (int) $wpdb->get_var(
+				$wpdb->prepare(
+					'SELECT COUNT(*) FROM %i WHERE 1=1',
+					$table
+				)
+			);
+			$rows  = $wpdb->get_results(
+				$wpdb->prepare(
+					'SELECT * FROM %i WHERE 1=1 ORDER BY id DESC LIMIT %d OFFSET %d',
+					$table,
+					$per_page,
+					$offset
+				),
+				ARRAY_A
+			);
+		}
 
 		return array(
 			'rows'  => is_array( $rows ) ? $rows : array(),

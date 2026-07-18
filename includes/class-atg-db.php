@@ -118,25 +118,21 @@ class ATG_DB {
 	}
 
 	/**
-	 * Delete log rows older than the retention window.
-	 *
-	 * @param int $days Retention in days.
-	 */
 	public static function prune( $days ) {
 		global $wpdb;
 		$days = max( 1, absint( $days ) );
 		$deleted = (int) $wpdb->query(
 			$wpdb->prepare(
-				// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
-				'DELETE FROM ' . self::table( 'log' ) . ' WHERE ts < DATE_SUB(%s, INTERVAL %d DAY)',
+				'DELETE FROM %i WHERE ts < DATE_SUB(%s, INTERVAL %d DAY)',
+				self::table( 'log' ),
 				current_time( 'mysql' ),
 				$days
 			)
 		);
 		$wpdb->query(
 			$wpdb->prepare(
-				// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
-				'DELETE FROM ' . self::table( 'stats' ) . ' WHERE day < DATE_SUB(%s, INTERVAL %d DAY)',
+				'DELETE FROM %i WHERE day < DATE_SUB(%s, INTERVAL %d DAY)',
+				self::table( 'stats' ),
 				current_time( 'mysql' ),
 				max( $days, 90 )
 			)
@@ -150,9 +146,12 @@ class ATG_DB {
 	public static function drop() {
 		global $wpdb;
 		foreach ( array( 'log', 'stats', 'alerts' ) as $t ) {
-			$table = self::table( $t );
-			// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
-			$wpdb->query( "DROP TABLE IF EXISTS {$table}" );
+			$wpdb->query(
+				$wpdb->prepare(
+					'DROP TABLE IF EXISTS %i',
+					self::table( $t )
+				)
+			);
 		}
 	}
 }

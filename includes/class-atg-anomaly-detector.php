@@ -22,25 +22,24 @@ class ATG_Anomaly_Detector {
 		$week_ago  = gmdate( 'Y-m-d', strtotime( '-8 days' ) );
 
 		// Vendor-level spike detection.
-		// phpcs:disable WordPress.DB.PreparedSQL.InterpolatedNotPrepared
 		$vendors = $wpdb->get_results(
 			$wpdb->prepare(
-				"SELECT vendor,
+				'SELECT vendor,
 						SUM(CASE WHEN day = %s THEN hits ELSE 0 END) AS yesterday,
 						AVG(CASE WHEN day >= %s AND day < %s THEN hits ELSE NULL END) AS avg7
-				 FROM {$stats}
-				 WHERE vendor != ''
+				 FROM %i
+				 WHERE vendor != \'\'
 				   AND day >= %s
 				 GROUP BY vendor
-				 HAVING avg7 > 0",
+				 HAVING avg7 > 0',
 				$yesterday,
 				$week_ago,
 				$yesterday,
+				ATG_DB::table( 'stats' ),
 				$week_ago
 			),
 			ARRAY_A
 		);
-		// phpcs:enable
 
 		foreach ( $vendors as $row ) {
 			$ratio = round( $row['yesterday'] / $row['avg7'], 1 );
@@ -57,8 +56,8 @@ class ATG_Anomaly_Detector {
 			if ( $ratio > $threshold ) {
 				ATG_Plugin::instance()->alerts->create(
 					'anomaly_spike',
-					/* translators: %1$s vendor, %2$s ratio */
 					sprintf(
+						/* translators: 1: vendor name, 2: ratio value */
 						__( '%1$s traffic is %2$sx above its 7-day average', 'ai-traffic-guardian' ),
 						$row['vendor'],
 						$ratio

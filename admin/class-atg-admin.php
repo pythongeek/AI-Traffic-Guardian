@@ -247,7 +247,8 @@ class ATG_Admin {
 			wp_die( esc_html__( 'Access denied.', 'ai-traffic-guardian' ) );
 		}
 		if ( isset( $_POST['submit'] ) && check_admin_referer( 'atg-network-settings' ) ) {
-			$settings = isset( $_POST['settings'] ) ? (array) $_POST['settings'] : array();
+			$raw_post = isset( $_POST['settings'] ) ? map_deep( wp_unslash( $_POST['settings'] ), 'sanitize_text_field' ) : array();
+			$settings = is_array( $raw_post ) ? $raw_post : array();
 			$defaults = ATG_Plugin::default_settings();
 			$clean    = array();
 			foreach ( $defaults as $key => $default ) {
@@ -350,14 +351,13 @@ class ATG_Admin {
 		// Detect high DB rate-limiter load.
 		if ( ! wp_using_ext_object_cache() && ! in_array( 'no_object_cache', $dismissed, true ) ) {
 			global $wpdb;
-			$stats = ATG_DB::table( 'stats' );
-			$day   = gmdate( 'Y-m-d' );
-			$hits  = (int) $wpdb->get_var( $wpdb->prepare( "SELECT SUM(hits) FROM {$stats} WHERE day = %s", $day ) );
-			$minutes = ( (int) date( 'H' ) * 60 ) + (int) date( 'i' );
+			$day     = gmdate( 'Y-m-d' );
+			$hits    = (int) $wpdb->get_var( $wpdb->prepare( 'SELECT SUM(hits) FROM %i WHERE day = %s', ATG_DB::table( 'stats' ), $day ) );
+			$minutes = ( (int) gmdate( 'H' ) * 60 ) + (int) gmdate( 'i' );
 			if ( $minutes < 60 ) {
 				$yesterday = gmdate( 'Y-m-d', time() - DAY_IN_SECONDS );
-				$hits = (int) $wpdb->get_var( $wpdb->prepare( "SELECT SUM(hits) FROM {$stats} WHERE day IN (%s, %s)", $yesterday, $day ) );
-				$minutes = 1440;
+				$hits      = (int) $wpdb->get_var( $wpdb->prepare( 'SELECT SUM(hits) FROM %i WHERE day IN (%s, %s)', ATG_DB::table( 'stats' ), $yesterday, $day ) );
+				$minutes   = 1440;
 			}
 			$rpm = $minutes > 0 ? ( $hits / $minutes ) : 0;
 
@@ -365,6 +365,7 @@ class ATG_Admin {
 				$dismiss_url = wp_nonce_url( add_query_arg( 'atg_dismiss_conflict', 'no_object_cache' ), 'atg_dismiss_conflict' );
 				echo '<div class="notice notice-warning is-dismissible" style="position:relative;">';
 				echo '<p><strong>' . esc_html__( 'AI Traffic Guardian warning: High database rate-limiting load', 'ai-traffic-guardian' ) . '</strong></p>';
+				/* translators: %d requests per minute */
 				echo '<p>' . sprintf( esc_html__( 'Your site is serving approximately %d rpm but is not using a persistent object cache. Rate limiter transients are causing heavy database write load. Action: Install/configure Redis or Memcached.', 'ai-traffic-guardian' ), (int) $rpm ) . '</p>';
 				echo '<p><a href="' . esc_url( $dismiss_url ) . '">' . esc_html__( 'Dismiss this warning', 'ai-traffic-guardian' ) . '</a></p>';
 				echo '</div>';
