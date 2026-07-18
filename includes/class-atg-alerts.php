@@ -54,7 +54,8 @@ class ATG_Alerts {
 			array( '%s', '%s', '%s', '%s', '%s' )
 		);
 
-		if ( $plugin->get( 'alert_email', false ) ) {
+		$is_staging = $plugin->get( 'staging_mode', false ) || ( defined( 'WP_ENV' ) && 'staging' === WP_ENV ) || ( defined( 'WP_DEBUG' ) && WP_DEBUG );
+		if ( $plugin->get( 'alert_email', false ) && ! $is_staging ) {
 			$to      = get_option( 'admin_email' );
 			$subject = sprintf( /* translators: %s alert title */ __( '[AI Traffic Guardian] %s', 'ai-traffic-guardian' ), $title );
 			$body    = $title . "\n\n" . print_r( $payload, true ); // phpcs:ignore WordPress.PHP.DevelopmentFunctions

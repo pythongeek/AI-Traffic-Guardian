@@ -72,6 +72,7 @@ final class ATG_Plugin {
 			'enforcement'           => 'shadow',
 			'shadow_started'        => 0,
 			'shadow_days'           => 7,
+			'staging_mode'          => false,
 			// Authenticated users are always treated as human (gap-analysis P0).
 			'auth_bypass'           => true,
 			// What to do with traffic we cannot classify.
@@ -179,6 +180,10 @@ final class ATG_Plugin {
 			$admin->hooks();
 		}
 
+		if ( defined( 'WP_CLI' ) && WP_CLI ) {
+			require_once ATG_PLUGIN_DIR . 'includes/class-atg-cli-command.php';
+		}
+
 		// Session cookie for rate limiting (anonymous traffic only).
 		add_action( 'init', array( $this, 'ensure_session_cookie' ), 2 );
 	}
@@ -210,6 +215,9 @@ final class ATG_Plugin {
 	 * @return string shadow|active|off
 	 */
 	public function enforcement_mode() {
+		if ( $this->get( 'staging_mode', false ) || ( defined( 'WP_ENV' ) && 'staging' === WP_ENV ) || ( defined( 'WP_DEBUG' ) && WP_DEBUG ) ) {
+			return 'shadow';
+		}
 		// Shadow stays shadow after the grace period until the admin promotes
 		// to active — we never silently start blocking traffic.
 		return $this->get( 'enforcement', 'shadow' );

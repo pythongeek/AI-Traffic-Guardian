@@ -113,7 +113,13 @@ class ATG_Verifier {
 			return $cached;
 		}
 		$ranges = $this->fetch_ranges( $source );
-		set_transient( $cache_key, $ranges, WEEK_IN_SECONDS );
+		if ( empty( $ranges ) ) {
+			set_transient( $cache_key, $ranges, HOUR_IN_SECONDS );
+			// phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_error_log
+			error_log( sprintf( 'AI Traffic Guardian: Failed to fetch IP ranges from %s. Caching failure for 1 hour.', $source ) );
+		} else {
+			set_transient( $cache_key, $ranges, WEEK_IN_SECONDS );
+		}
 		return $ranges;
 	}
 

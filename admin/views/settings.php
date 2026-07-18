@@ -32,6 +32,10 @@ if ( ! defined( 'ABSPATH' ) ) {
 				<input type="checkbox" data-setting="auth_bypass" />
 				<span><?php esc_html_e( 'Authenticated users bypass all bot classification (strongly recommended)', 'ai-traffic-guardian' ); ?></span>
 			</label>
+			<label class="atg-switch-row">
+				<input type="checkbox" data-setting="staging_mode" />
+				<span><?php esc_html_e( 'Staging / Dev Mode (forces shadow mode and silences email alerts)', 'ai-traffic-guardian' ); ?></span>
+			</label>
 			<label class="atg-field-row">
 				<span><?php esc_html_e( 'Unknown automated traffic', 'ai-traffic-guardian' ); ?></span>
 				<select data-setting="default_unknown_action">
