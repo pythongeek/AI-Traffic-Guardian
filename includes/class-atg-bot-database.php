@@ -79,6 +79,14 @@ class ATG_Bot_Database {
 				'rdns_suffix' => array( '.googlebot.com', '.google.com' ),
 			),
 			array(
+				'name'        => 'Google Shopping',
+				'vendor'      => 'Google',
+				'purpose'     => 'search_engine',
+				'pattern'     => '#Google-Shopping|Googlebot-Product#i',
+				'verify'      => 'rdns',
+				'rdns_suffix' => array( '.googlebot.com', '.google.com' ),
+			),
+			array(
 				'name'    => 'Ecosia',
 				'vendor'  => 'Ecosia',
 				'purpose' => 'search_engine',
@@ -109,6 +117,13 @@ class ATG_Bot_Database {
 				'rdns_suffix' => array( '.search.msn.com' ),
 			),
 			array(
+				'name'    => 'Bing Shopping',
+				'vendor'  => 'Microsoft',
+				'purpose' => 'search_engine',
+				'pattern' => '#BingBot-Shopping|MSShoppingBot#i',
+				'verify'  => 'none',
+			),
+			array(
 				'name'        => 'DuckDuckBot',
 				'vendor'      => 'DuckDuckGo',
 				'purpose'     => 'search_engine',
@@ -123,6 +138,13 @@ class ATG_Bot_Database {
 				'pattern'     => '#\bApplebot\b#i',
 				'verify'      => 'rdns',
 				'rdns_suffix' => array( '.applebot.apple.com' ),
+			),
+			array(
+				'name'    => 'Alexa Crawler',
+				'vendor'  => 'Amazon',
+				'purpose' => 'search_engine',
+				'pattern' => '#ia_archiver.*Alexa|Alexa Internet#i',
+				'verify'  => 'none',
 			),
 			array(
 				'name'        => 'YandexBot',
