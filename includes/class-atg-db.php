@@ -125,7 +125,7 @@ class ATG_DB {
 	public static function prune( $days ) {
 		global $wpdb;
 		$days = max( 1, absint( $days ) );
-		$wpdb->query(
+		$deleted = (int) $wpdb->query(
 			$wpdb->prepare(
 				// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
 				'DELETE FROM ' . self::table( 'log' ) . ' WHERE ts < DATE_SUB(%s, INTERVAL %d DAY)',
@@ -141,6 +141,7 @@ class ATG_DB {
 				max( $days, 90 )
 			)
 		);
+		do_action( 'atg_after_prune', $deleted, $days );
 	}
 
 	/**

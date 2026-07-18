@@ -97,12 +97,15 @@ class ATG_Form_Guard {
 		echo '<style>.atg-hp{position:absolute!important;left:-9999px!important;top:-9999px!important;height:1px;width:1px;overflow:hidden;}</style>' . "\n";
 	}
 
-	/**
-	 * Render the honeypot field (accessibility-hardened).
-	 */
-	public function render_field() {
+	public function render_field( $context = '' ) {
 		$plugin = ATG_Plugin::instance();
 		$token  = $this->issue_token();
+
+		if ( ! is_string( $context ) || '' === $context ) {
+			$context = current_filter();
+		}
+		do_action( 'atg_before_honeypot_field', $context );
+
 		echo '<p class="atg-hp" aria-hidden="true">';
 		echo '<label>' . esc_html__( 'Leave this field empty', 'ai-traffic-guardian' );
 		echo '<input type="text" name="atg_hp" value="" autocomplete="off" tabindex="-1" data-lpignore="true" data-1p-ignore="true" data-bwignore="true" />';

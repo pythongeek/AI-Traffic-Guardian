@@ -25,10 +25,11 @@ class ATG_Enforcer {
 		$mode   = $plugin->enforcement_mode();
 
 		// Rate limiting applies to anonymous humans and allowed/throttled bots.
-		if ( in_array( $decision['classification'], array( 'human', 'unknown_bot' ), true ) ) {
+		$rate_enabled = (bool) apply_filters( 'atg_rate_limit_enabled', true, $decision );
+		if ( $rate_enabled && in_array( $decision['classification'], array( 'human', 'unknown_bot' ), true ) ) {
 			$kind     = 'human' === $decision['classification'] ? 'human' : 'bot';
 			$decision = $plugin->rate_limiter->check( $decision, $kind );
-		} elseif ( 'bot' === $decision['classification'] && 'block' !== $decision['action'] ) {
+		} elseif ( $rate_enabled && 'bot' === $decision['classification'] && 'block' !== $decision['action'] ) {
 			$decision = $plugin->rate_limiter->check( $decision, 'bot' );
 		}
 
@@ -37,6 +38,7 @@ class ATG_Enforcer {
 			$decision['enforced'] = false;
 			$plugin->logger->log( $decision );
 			$this->send_status_header( $decision, true );
+			do_action( 'atg_request_enforced', $decision );
 			return;
 		}
 
@@ -73,6 +75,13 @@ class ATG_Enforcer {
 
 		// Allowed or soft-throttled requests continue; log them.
 		$plugin->logger->log( $decision );
+
+		/**
+		 * Fires after enforcement is applied (after allow/throttle/block).
+		 *
+		 * @param array $decision Full classification + enforcement array.
+		 */
+		do_action( 'atg_request_enforced', $decision );
 	}
 
 	/**

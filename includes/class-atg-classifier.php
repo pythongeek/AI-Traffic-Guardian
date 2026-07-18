@@ -116,6 +116,19 @@ class ATG_Classifier {
 			'country'        => substr( $country, 0, 2 ),
 		);
 
+		// Threat intelligence IP risk scoring (Section 6.7).
+		$intel_score = (int) apply_filters( 'atg_threat_intel_score', 0, $ip );
+		if ( $intel_score > 0 ) {
+			$base['risk'] = max( $base['risk'], $intel_score );
+			if ( $intel_score >= 80 ) {
+				$base['classification'] = 'bot';
+				$base['purpose']        = 'scraper';
+				$base['action']         = 'block';
+				$base['reason']         = 'Threat Intelligence Feed Block (Score: ' . $intel_score . ')';
+				return $base;
+			}
+		}
+
 		// 1. WP-internal automation: never classified.
 		$internal = $plugin->allowlist->is_wp_internal();
 		if ( $internal ) {
@@ -192,6 +205,14 @@ class ATG_Classifier {
 						'path' => $path,
 					)
 				);
+				/**
+				 * Fires when a new unknown/unrecognized bot is detected.
+				 *
+				 * @param string $ua   User agent.
+				 * @param string $ip   Client IP.
+				 * @param string $path Request path.
+				 */
+				do_action( 'atg_new_bot_detected', $ua, $ip, $path );
 			}
 			$base['classification'] = 'unknown_bot';
 			$base['action']         = in_array( $action, array( 'allow', 'throttle', 'block' ), true ) ? $action : 'throttle';
@@ -256,6 +277,12 @@ class ATG_Classifier {
 						'ip' => $base['ip'],
 					)
 				);
+				/**
+				 * Fires when a spoofed bot is detected and blocked.
+				 *
+				 * @param array $base The decision array (which contains details about the spoofed request).
+				 */
+				do_action( 'atg_bot_spoofed', $base );
 				return $base;
 			} else {
 				// Unverifiable: throttle + log, never trust (gap-analysis P1).

@@ -39,6 +39,15 @@ class ATG_Verifier {
 			$result = $this->verify_rdns( $ip, (array) $sig['rdns_suffix'] );
 		} elseif ( 'ip_range' === $method && ! empty( $sig['ip_source'] ) ) {
 			$result = $this->verify_ip_range( $ip, $sig['ip_source'] );
+		} elseif ( 'none' !== $method ) {
+			/**
+			 * Filter verification result for custom verification methods.
+			 *
+			 * @param string $result Default 'unverifiable'.
+			 * @param string $ip     Client IP.
+			 * @param array  $sig    Signature array.
+			 */
+			$result = apply_filters( "atg_verify_method_{$method}", 'unverifiable', $ip, $sig );
 		}
 
 		set_transient( $cache_key, $result, self::CACHE_TTL );
