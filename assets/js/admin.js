@@ -99,6 +99,7 @@
 		var days = 7;
 		var seriesChart = null;
 		var purposeChart = null;
+		var summaryData = null;
 
 		var CLASS_COLORS = {
 			human: '#059669',
@@ -124,6 +125,7 @@
 
 		function loadSummary() {
 			api('summary?days=' + days).then(function (data) {
+				summaryData = data;
 				// KPIs.
 				document.querySelector('[data-kpi="total"]').textContent = num(data.kpis.total);
 				document.querySelector('[data-kpi="bot_share"]').textContent = data.kpis.bot_share + '%';
@@ -151,11 +153,48 @@
 				renderSeries(data.series);
 				renderPurpose(data.purposes);
 				renderVendors(data.vendors);
+				calculateCostAndBandwidth();
 			}).catch(function () { toast(cfg.i18n.error, true); });
 
 			api('log?per_page=10').then(function (res) {
 				renderRecent(res.rows);
 			}).catch(function () {});
+		}
+
+		function calculateCostAndBandwidth() {
+			if (!summaryData) { return; }
+			var costMultiplier = parseFloat(document.getElementById('atg-cost-multiplier').value) || 0.05;
+			var bandwidthMultiplier = parseFloat(document.getElementById('atg-bandwidth-multiplier').value) || 150;
+
+			var total = summaryData.kpis.total || 0;
+			var botShare = summaryData.kpis.bot_share || 0;
+			var blocked = summaryData.kpis.blocked || 0;
+
+			var botRequests = Math.round(total * (botShare / 100));
+			var costSavings = (blocked / 10000) * costMultiplier;
+			var bandwidthSaved = blocked * bandwidthMultiplier;
+
+			var bandwidthStr = '';
+			if (bandwidthSaved >= 1024 * 1024) {
+				bandwidthStr = (bandwidthSaved / (1024 * 1024)).toFixed(2) + ' GB';
+			} else if (bandwidthSaved >= 1024) {
+				bandwidthStr = (bandwidthSaved / 1024).toFixed(2) + ' MB';
+			} else {
+				bandwidthStr = bandwidthSaved.toFixed(0) + ' KB';
+			}
+
+			document.getElementById('atg-cost-total-bots').textContent = num(botRequests);
+			document.getElementById('atg-cost-blocked-bots').textContent = num(blocked);
+			document.getElementById('atg-cost-savings').textContent = '$' + costSavings.toFixed(2);
+			document.getElementById('atg-bandwidth-saved').textContent = bandwidthStr;
+
+			var monthlyMultiplier = 30 / days;
+			var projectedRequests = Math.round(total * monthlyMultiplier);
+			var projectedBotRequests = Math.round(projectedRequests * (botShare / 100));
+			var projectedCost = (projectedBotRequests / 10000) * costMultiplier;
+
+			document.getElementById('atg-projected-requests').textContent = num(projectedBotRequests);
+			document.getElementById('atg-projected-cost').textContent = '$' + projectedCost.toFixed(2);
 		}
 
 		function renderSeries(series) {
@@ -248,6 +287,29 @@
 					'<td>' + pill(r.action) + (r.enforced === '0' ? ' <span class="atg-pill atg-pill-neutral">shadow</span>' : '') + '</td>' +
 					'</tr>';
 			}).join('');
+		}
+
+		// Tab navigation logic.
+		document.querySelectorAll('.atg-tabs a').forEach(function(tab) {
+			tab.addEventListener('click', function(e) {
+				e.preventDefault();
+				document.querySelectorAll('.atg-tabs a').forEach(function(t) { t.classList.remove('nav-tab-active'); });
+				tab.classList.add('nav-tab-active');
+				var target = tab.getAttribute('data-tab');
+				if (target === 'overview') {
+					document.getElementById('atg-dashboard-overview-tab').style.display = 'block';
+					document.getElementById('atg-dashboard-cost-tab').style.display = 'none';
+				} else {
+					document.getElementById('atg-dashboard-overview-tab').style.display = 'none';
+					document.getElementById('atg-dashboard-cost-tab').style.display = 'block';
+					calculateCostAndBandwidth();
+				}
+			});
+		});
+
+		var recalcBtn = document.getElementById('atg-recalculate-cost-btn');
+		if (recalcBtn) {
+			recalcBtn.addEventListener('click', calculateCostAndBandwidth);
 		}
 
 		// Range buttons.

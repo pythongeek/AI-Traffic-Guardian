@@ -85,6 +85,22 @@ class ATG_Compat {
 			'php'          => PHP_VERSION,
 			'wp'           => get_bloginfo( 'version' ),
 		);
+
+		$conflicts = array();
+		if ( class_exists( 'WordfenceLS\Controller\ActivationSetup' ) || defined( 'WORDFENCE_VERSION' ) ) {
+			$conflicts[] = 'Wordfence';
+		}
+		if ( function_exists( 'cerber_get_ip' ) || class_exists( 'Cerber_Widget' ) ) {
+			$conflicts[] = 'WP Cerber';
+		}
+		if ( defined( 'ITSEC_VERSION' ) || class_exists( 'ITSEC_Core' ) ) {
+			$conflicts[] = 'iThemes Security / Solid Security';
+		}
+		if ( defined( 'AIO_WP_SECURITY_VERSION' ) || class_exists( 'AIOWPSecurity_Core' ) ) {
+			$conflicts[] = 'All In One WP Security';
+		}
+		$report['conflicts'] = $conflicts;
+
 		return $report;
 	}
 }

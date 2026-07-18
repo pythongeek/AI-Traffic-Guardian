@@ -48,6 +48,14 @@ if ( ! defined( 'ABSPATH' ) ) {
 				<span><?php esc_html_e( 'Number of content links', 'ai-traffic-guardian' ); ?></span>
 				<input type="number" min="5" max="100" data-setting="llms_posts" />
 			</label>
+			<label class="atg-field-row">
+				<span><?php esc_html_e( 'License type', 'ai-traffic-guardian' ); ?></span>
+				<input type="text" class="regular-text" data-setting="llms_license" placeholder="CC-BY-4.0" />
+			</label>
+			<label class="atg-field-row">
+				<span><?php esc_html_e( 'Optional URLs', 'ai-traffic-guardian' ); ?></span>
+				<textarea class="large-text code" data-setting="llms_optional_urls" rows="4" placeholder="<?php esc_attr_e( 'Title|https://example.com/url (one per line)', 'ai-traffic-guardian' ); ?>"></textarea>
+			</label>
 		</div>
 	</div>
 

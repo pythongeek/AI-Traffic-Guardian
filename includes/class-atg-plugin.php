@@ -79,6 +79,9 @@ final class ATG_Plugin {
 			'cloudflare_api_token'  => '',
 			'cloudflare_account_id' => '',
 			'cloudflare_ip_list_id' => '',
+			// llms.txt enhancements.
+			'llms_license'          => 'CC-BY-4.0',
+			'llms_optional_urls'    => '',
 			// Authenticated users are always treated as human (gap-analysis P0).
 			'auth_bypass'           => true,
 			// What to do with traffic we cannot classify.

@@ -41,6 +41,7 @@ class ATG_Admin {
 		add_action( 'network_admin_menu', array( $this, 'network_menu' ) );
 		add_action( 'admin_enqueue_scripts', array( $this, 'assets' ) );
 		add_filter( 'plugin_action_links_' . ATG_PLUGIN_BASENAME, array( $this, 'action_links' ) );
+		add_action( 'admin_notices', array( $this, 'conflict_notices' ) );
 	}
 
 	/**
@@ -270,5 +271,60 @@ class ATG_Admin {
 			</form>
 		</div>
 		<?php
+	}
+
+	/**
+	 * Render dismissible admin notices for plugin conflicts.
+	 */
+	public function conflict_notices() {
+		if ( ! current_user_can( 'manage_options' ) ) {
+			return;
+		}
+
+		$env = ATG_Compat::environment();
+		if ( empty( $env['conflicts'] ) ) {
+			return;
+		}
+
+		$user_id   = get_current_user_id();
+		$dismissed = get_user_meta( $user_id, 'atg_dismissed_conflicts', true );
+		if ( ! is_array( $dismissed ) ) {
+			$dismissed = array();
+		}
+
+		if ( isset( $_GET['atg_dismiss_conflict'] ) && check_admin_referer( 'atg_dismiss_conflict' ) ) {
+			$to_dismiss = sanitize_text_field( wp_unslash( $_GET['atg_dismiss_conflict'] ) );
+			if ( ! in_array( $to_dismiss, $dismissed, true ) ) {
+				$dismissed[] = $to_dismiss;
+				update_user_meta( $user_id, 'atg_dismissed_conflicts', $dismissed );
+			}
+			wp_safe_redirect( remove_query_arg( array( 'atg_dismiss_conflict', '_wpnonce' ) ) );
+			exit;
+		}
+
+		foreach ( $env['conflicts'] as $plugin_name ) {
+			if ( in_array( $plugin_name, $dismissed, true ) ) {
+				continue;
+			}
+
+			$remediation = '';
+			if ( 'Wordfence' === $plugin_name ) {
+				$remediation = __( 'Wordfence may rate-limit ATG REST API requests. Action: Add "/wp-json/atg/" to Wordfence allowlisted paths.', 'ai-traffic-guardian' );
+			} elseif ( 'WP Cerber' === $plugin_name ) {
+				$remediation = __( 'WP Cerber honeypot can conflict with ATG form guard. Action: Disable ATG comment/checkout honeypots or Cerber honeypots.', 'ai-traffic-guardian' );
+			} elseif ( 'iThemes Security / Solid Security' === $plugin_name ) {
+				$remediation = __( 'Solid Security file change detection may flag ATG tables. Action: Add ATG database tables to Solid Security exclusions.', 'ai-traffic-guardian' );
+			} elseif ( 'All In One WP Security' === $plugin_name ) {
+				$remediation = __( 'All In One WP Security IP rules may override ATG rate limits. Action: Use ATG for bot detection and AIOS for brute force prevention.', 'ai-traffic-guardian' );
+			}
+
+			$dismiss_url = wp_nonce_url( add_query_arg( 'atg_dismiss_conflict', $plugin_name ), 'atg_dismiss_conflict' );
+
+			echo '<div class="notice notice-warning is-dismissible" style="position:relative;">';
+			echo '<p><strong>' . sprintf( esc_html__( 'AI Traffic Guardian conflict detected: %s', 'ai-traffic-guardian' ), esc_html( $plugin_name ) ) . '</strong></p>';
+			echo '<p>' . esc_html( $remediation ) . '</p>';
+			echo '<p><a href="' . esc_url( $dismiss_url ) . '">' . esc_html__( 'Dismiss this warning', 'ai-traffic-guardian' ) . '</a></p>';
+			echo '</div>';
+		}
 	}
 }

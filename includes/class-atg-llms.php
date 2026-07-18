@@ -74,8 +74,8 @@ class ATG_Llms {
 	 * @return string
 	 */
 	public function render() {
-		$plugin = ATG_Plugin::instance();
-		$lines  = array();
+		$plugin  = ATG_Plugin::instance();
+		$lines   = array();
 		$lines[] = '# ' . get_bloginfo( 'name' );
 		$desc    = $plugin->get( 'llms_intro', '' );
 		if ( '' === trim( (string) $desc ) ) {
@@ -85,6 +85,14 @@ class ATG_Llms {
 			$lines[] = '';
 			$lines[] = '> ' . $desc;
 		}
+
+		$license = $plugin->get( 'llms_license', 'CC-BY-4.0' );
+		if ( $license ) {
+			$lines[] = '';
+			$lines[] = 'Info:';
+			$lines[] = '- License: ' . $license;
+		}
+
 		$lines[] = '';
 		$lines[] = '## Content';
 
@@ -101,6 +109,40 @@ class ATG_Llms {
 			$excerpt = has_excerpt( $post ) ? get_the_excerpt( $post ) : wp_trim_words( $post->post_content, 20 );
 			$lines[] = sprintf( '- [%s](%s): %s', $post->post_title, get_permalink( $post ), $excerpt );
 		}
+
+		$optional_text = $plugin->get( 'llms_optional_urls', '' );
+		$filtered_links = apply_filters( 'atg_llms_optional_links', array() );
+
+		if ( $optional_text || ! empty( $filtered_links ) ) {
+			$lines[] = '';
+			$lines[] = '## Optional';
+
+			if ( $optional_text ) {
+				$opt_lines = explode( "\n", $optional_text );
+				foreach ( $opt_lines as $opt_line ) {
+					$opt_line = trim( $opt_line );
+					if ( '' === $opt_line ) {
+						continue;
+					}
+					if ( false !== strpos( $opt_line, '|' ) ) {
+						list( $title, $url ) = explode( '|', $opt_line, 2 );
+						$lines[] = sprintf( '- [%s](%s)', trim( $title ), trim( $url ) );
+					} else {
+						$lines[] = sprintf( '- <%s>', $opt_line );
+					}
+				}
+			}
+
+			foreach ( $filtered_links as $link ) {
+				if ( is_array( $link ) && count( $link ) >= 2 ) {
+					$title   = $link[0];
+					$url     = $link[1];
+					$link_desc = isset( $link[2] ) ? $link[2] : '';
+					$lines[] = sprintf( '- [%s](%s)%s', $title, $url, $link_desc ? ': ' . $link_desc : '' );
+				}
+			}
+		}
+
 		return implode( "\n", $lines ) . "\n";
 	}
 }
