@@ -53,17 +53,45 @@ class ATG_REST {
 	}
 
 	/**
+	 * Permission check for viewer/editor endpoints.
+	 *
+	 * @return bool|WP_Error
+	 */
+	public static function can_view_reports() {
+		if ( ! current_user_can( 'atg_view_reports' ) && ! current_user_can( 'manage_options' ) ) {
+			return false;
+		}
+
+		$user_id = get_current_user_id();
+		if ( $user_id ) {
+			$key   = 'atg_rl_rest_' . $user_id;
+			$count = (int) get_transient( $key );
+			if ( $count >= 10 ) {
+				return new WP_Error(
+					'rest_rate_limited',
+					__( 'Too many requests. Please wait a minute.', 'ai-traffic-guardian' ),
+					array( 'status' => 429 )
+				);
+			}
+			set_transient( $key, $count + 1, MINUTE_IN_SECONDS );
+		}
+
+		return true;
+	}
+
+	/**
 	 * Route definitions.
 	 */
 	public static function routes() {
-		$admin = array( 'permission_callback' => array( __CLASS__, 'can_manage' ) );
+		$admin  = array( 'permission_callback' => array( __CLASS__, 'can_manage' ) );
+		$viewer = array( 'permission_callback' => array( __CLASS__, 'can_view_reports' ) );
 
-		register_rest_route( self::NS, '/summary', array_merge( $admin, array(
+		register_rest_route( self::NS, '/summary', array_merge( $viewer, array(
 			'methods'  => 'GET',
 			'callback' => array( __CLASS__, 'summary' ),
 		) ) );
 
-		register_rest_route( self::NS, '/log', array_merge( $admin, array(
+		register_rest_route( self::NS, '/log', array_merge( $viewer, array(
 			'methods'  => 'GET',
 			'callback' => array( __CLASS__, 'log' ),
 		) ) );
@@ -95,7 +123,7 @@ class ATG_REST {
 			'callback' => array( __CLASS__, 'set_allowlist' ),
 		) ) );
 
-		register_rest_route( self::NS, '/alerts', array_merge( $admin, array(
+		register_rest_route( self::NS, '/alerts', array_merge( $viewer, array(
 			'methods'  => 'GET',
 			'callback' => array( __CLASS__, 'get_alerts' ),
 		) ) );
@@ -239,6 +267,12 @@ class ATG_REST {
 					'started'   => (int) $plugin->get( 'shadow_started', 0 ),
 					'days'      => (int) $plugin->get( 'shadow_days', 7 ),
 					'remaining' => max( 0, ( (int) $plugin->get( 'shadow_started', 0 ) + ( (int) $plugin->get( 'shadow_days', 7 ) * DAY_IN_SECONDS ) ) - time() ),
+				),
+				'shadow_snapshot' => array(
+					'total'     => (int) $plugin->get( 'shadow_snapshot_total', 0 ),
+					'bot_total' => (int) $plugin->get( 'shadow_snapshot_bot_total', 0 ),
+					'bot_share' => (float) $plugin->get( 'shadow_snapshot_bot_share', 0 ),
+					'time'      => (int) $plugin->get( 'shadow_snapshot_time', 0 ),
 				),
 				'woo'        => class_exists( 'WooCommerce' ),
 			),
@@ -419,6 +453,39 @@ class ATG_REST {
 			return new WP_Error( 'atg_bad_mode', __( 'Invalid mode.', 'ai-traffic-guardian' ), array( 'status' => 400 ) );
 		}
 		$plugin = ATG_Plugin::instance();
+
+		if ( 'active' === $mode && 'shadow' === $plugin->enforcement_mode() ) {
+			global $wpdb;
+			$stats      = ATG_DB::table( 'stats' );
+			$started_ts = (int) $plugin->get( 'shadow_started', 0 );
+			$from_date  = $started_ts ? gmdate( 'Y-m-d', $started_ts ) : gmdate( 'Y-m-d', time() - 7 * DAY_IN_SECONDS );
+
+			$rows = $wpdb->get_results(
+				$wpdb->prepare(
+					"SELECT classification, SUM(hits) AS hits FROM {$stats} WHERE day >= %s GROUP BY classification",
+					$from_date
+				),
+				ARRAY_A
+			);
+
+			$total       = 0;
+			$bot_total   = 0;
+			$bot_classes = array( 'bot', 'unknown_bot', 'form_abuse' );
+			foreach ( $rows as $row ) {
+				$total += (int) $row['hits'];
+				if ( in_array( $row['classification'], $bot_classes, true ) ) {
+					$bot_total += (int) $row['hits'];
+				}
+			}
+
+			$plugin->update_settings( array(
+				'shadow_snapshot_total'     => $total,
+				'shadow_snapshot_bot_total' => $bot_total,
+				'shadow_snapshot_bot_share' => $total > 0 ? round( ( $bot_total / $total ) * 100, 1 ) : 0,
+				'shadow_snapshot_time'      => time(),
+			) );
+		}
+
 		$update = array( 'enforcement' => $mode );
 		if ( 'shadow' === $mode ) {
 			$update['shadow_started'] = time();

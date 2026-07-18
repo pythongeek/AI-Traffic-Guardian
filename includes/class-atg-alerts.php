@@ -61,6 +61,24 @@ class ATG_Alerts {
 			$body    = $title . "\n\n" . print_r( $payload, true ); // phpcs:ignore WordPress.PHP.DevelopmentFunctions
 			wp_mail( $to, $subject, $body );
 		}
+
+		$webhook_url = $plugin->get( 'webhook_url', '' );
+		if ( ! empty( $webhook_url ) && ! $is_staging ) {
+			wp_remote_post(
+				$webhook_url,
+				array(
+					'headers' => array( 'Content-Type' => 'application/json' ),
+					'body'    => wp_json_encode(
+						array(
+							'text'    => $title,
+							'type'    => $type,
+							'payload' => $payload,
+						)
+					),
+					'timeout' => 5,
+				)
+			);
+		}
 	}
 
 	/**

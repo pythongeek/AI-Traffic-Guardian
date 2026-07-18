@@ -107,6 +107,9 @@ final class ATG_Plugin {
 			'protect_registration'  => true,
 			'protect_login'         => false,
 			'protect_woocommerce'   => true,
+			'protect_cf7'           => true,
+			'protect_gravityforms'  => true,
+			'protect_wpforms'       => true,
 			'woo_max_attempts'      => 5,    // checkout attempts per window.
 			'woo_window_min'        => 10,
 			'comment_fail_action'   => 'moderate', // moderate|block.
@@ -123,6 +126,14 @@ final class ATG_Plugin {
 			// Alerts.
 			'alert_new_bot'         => true,
 			'alert_email'           => false,
+			'webhook_url'           => '',
+			// Editor access.
+			'allow_editor_reports'  => true,
+			// Shadow snapshots.
+			'shadow_snapshot_total'     => 0,
+			'shadow_snapshot_bot_total' => 0,
+			'shadow_snapshot_bot_share' => 0,
+			'shadow_snapshot_time'      => 0,
 			// Headers.
 			'send_status_header'    => true,
 			// Housekeeping.
@@ -199,6 +210,21 @@ final class ATG_Plugin {
 
 		// Session cookie for rate limiting (anonymous traffic only).
 		add_action( 'init', array( $this, 'ensure_session_cookie' ), 2 );
+
+		// Update Editor / Admin capabilities.
+		$admin = get_role( 'administrator' );
+		if ( $admin && ! $admin->has_cap( 'atg_view_reports' ) ) {
+			$admin->add_cap( 'atg_view_reports' );
+		}
+
+		$editor = get_role( 'editor' );
+		if ( $editor ) {
+			if ( $this->get( 'allow_editor_reports', true ) ) {
+				$editor->add_cap( 'atg_view_reports' );
+			} else {
+				$editor->remove_cap( 'atg_view_reports' );
+			}
+		}
 	}
 
 	/**

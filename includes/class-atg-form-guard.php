@@ -49,6 +49,24 @@ class ATG_Form_Guard {
 			// Review spam (product reviews use the comment pipeline, covered above).
 		}
 
+		// Contact Form 7
+		if ( class_exists( 'WPCF7' ) && $plugin->get( 'protect_cf7', true ) ) {
+			add_filter( 'wpcf7_form_elements', array( $this, 'inject_cf7_field' ) );
+			add_action( 'wpcf7_before_send_mail', array( $this, 'check_cf7' ), 1 );
+		}
+
+		// Gravity Forms
+		if ( class_exists( 'GFCommon' ) && $plugin->get( 'protect_gravityforms', true ) ) {
+			add_filter( 'gform_form_tag', array( $this, 'inject_gravityforms_field' ), 10, 2 );
+			add_filter( 'gform_validation', array( $this, 'check_gravityforms' ) );
+		}
+
+		// WPForms
+		if ( class_exists( 'WPForms' ) && $plugin->get( 'protect_wpforms', true ) ) {
+			add_action( 'wpforms_display_field_before', array( $this, 'inject_wpforms_field' ), 10, 2 );
+			add_filter( 'wpforms_process', array( $this, 'check_wpforms' ), 10, 3 );
+		}
+
 		add_action( 'wp_head', array( $this, 'honeypot_css' ) );
 		add_action( 'wp_enqueue_scripts', array( $this, 'enqueue_beacon' ) );
 	}
@@ -283,5 +301,48 @@ class ATG_Form_Guard {
 				'session'        => isset( $_COOKIE['atg_sid'] ) ? sanitize_text_field( wp_unslash( $_COOKIE['atg_sid'] ) ) : '',
 			)
 		);
+	}
+
+	public function inject_cf7_field( $html ) {
+		ob_start();
+		$this->render_field();
+		return $html . ob_get_clean();
+	}
+
+	public function check_cf7( $cf7 ) {
+		if ( ! $this->passes() ) {
+			$this->log_fail( 'cf7' );
+			add_filter( 'wpcf7_spam', '__return_true' );
+		}
+	}
+
+	public function inject_gravityforms_field( $tag, $form ) {
+		ob_start();
+		$this->render_field();
+		return $tag . ob_get_clean();
+	}
+
+	public function check_gravityforms( $validation_result ) {
+		if ( ! $this->passes() ) {
+			$this->log_fail( 'gravityforms' );
+			$validation_result['is_valid'] = false;
+		}
+		return $validation_result;
+	}
+
+	public function inject_wpforms_field( $field, $form ) {
+		static $injected = false;
+		if ( ! $injected && (int) $field['id'] === (int) array_key_first( $form['fields'] ) ) {
+			$this->render_field();
+			$injected = true;
+		}
+	}
+
+	public function check_wpforms( $fields, $entry, $form ) {
+		if ( ! $this->passes() ) {
+			$this->log_fail( 'wpforms' );
+			wpforms()->get( 'process' )->errors[ $form['id'] ]['footer'] = __( 'Submission could not be verified.', 'ai-traffic-guardian' );
+		}
+		return $fields;
 	}
 }

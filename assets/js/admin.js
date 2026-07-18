@@ -154,6 +154,20 @@
 				renderPurpose(data.purposes);
 				renderVendors(data.vendors);
 				calculateCostAndBandwidth();
+
+				if (data.shadow_snapshot && data.shadow_snapshot.total > 0 && data.mode !== 'shadow') {
+					var compWidget = document.getElementById('atg-comparison-widget');
+					if (compWidget) {
+						compWidget.style.display = 'block';
+						document.getElementById('atg-compare-shadow-share').textContent = data.shadow_snapshot.bot_share + '%';
+						document.getElementById('atg-compare-shadow-desc').textContent = 'Bot traffic share out of ' + num(data.shadow_snapshot.total) + ' requests';
+						document.getElementById('atg-compare-active-share').textContent = data.kpis.bot_share + '%';
+						document.getElementById('atg-compare-active-desc').textContent = 'Active bot share (' + num(data.kpis.blocked) + ' blocked requests)';
+					}
+				} else {
+					var compWidget = document.getElementById('atg-comparison-widget');
+					if (compWidget) { compWidget.style.display = 'none'; }
+				}
 			}).catch(function () { toast(cfg.i18n.error, true); });
 
 			api('log?per_page=10').then(function (res) {

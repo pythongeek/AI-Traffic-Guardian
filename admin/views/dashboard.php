@@ -40,6 +40,26 @@ if ( ! defined( 'ABSPATH' ) ) {
 			<button class="button" data-atg-refresh><span class="dashicons dashicons-update"></span> <?php esc_html_e( 'Refresh', 'ai-traffic-guardian' ); ?></button>
 		</div>
 
+		<div class="atg-card" id="atg-comparison-widget" style="display:none; margin-bottom: 20px;">
+			<div class="atg-card-head">
+				<h2><?php esc_html_e( 'Enforcement Impact (Shadow vs Active)', 'ai-traffic-guardian' ); ?></h2>
+				<p class="description"><?php esc_html_e( 'Comparison of bot traffic profile recorded during the shadow period vs active enforcement.', 'ai-traffic-guardian' ); ?></p>
+			</div>
+			<div style="display: flex; gap: 40px; justify-content: space-around; align-items: center; padding: 20px 0;">
+				<div style="text-align: center;">
+					<h3 style="margin: 0; color: #64748b; font-size: 14px; text-transform: uppercase;"><?php esc_html_e( 'Shadow Period', 'ai-traffic-guardian' ); ?></h3>
+					<div style="font-size: 36px; font-weight: 700; color: #f97316; margin: 10px 0;" id="atg-compare-shadow-share">—</div>
+					<p class="description" id="atg-compare-shadow-desc">—</p>
+				</div>
+				<div style="font-size: 32px; color: #cbd5e1;">➔</div>
+				<div style="text-align: center;">
+					<h3 style="margin: 0; color: #64748b; font-size: 14px; text-transform: uppercase;"><?php esc_html_e( 'Active Enforcement', 'ai-traffic-guardian' ); ?></h3>
+					<div style="font-size: 36px; font-weight: 700; color: #10b981; margin: 10px 0;" id="atg-compare-active-share">—</div>
+					<p class="description" id="atg-compare-active-desc">—</p>
+				</div>
+			</div>
+		</div>
+
 		<div class="atg-kpis" data-atg-kpis>
 			<div class="atg-kpi">
 				<span class="atg-kpi-label"><?php esc_html_e( 'Total requests', 'ai-traffic-guardian' ); ?></span>

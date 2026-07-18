@@ -21,15 +21,15 @@ class ATG_Admin {
 	 */
 	public static function pages() {
 		return array(
-			'atg-dashboard'      => array( __( 'Dashboard', 'ai-traffic-guardian' ), 'dashboard.php' ),
-			'atg-policy'         => array( __( 'AI Policy Matrix', 'ai-traffic-guardian' ), 'policy-matrix.php' ),
-			'atg-log'            => array( __( 'Traffic Log', 'ai-traffic-guardian' ), 'traffic-log.php' ),
-			'atg-allowlist'      => array( __( 'Allowlist', 'ai-traffic-guardian' ), 'allowlist.php' ),
-			'atg-protection'     => array( __( 'Forms & Checkout', 'ai-traffic-guardian' ), 'protection.php' ),
-			'atg-analytics'      => array( __( 'Analytics Integrity', 'ai-traffic-guardian' ), 'analytics.php' ),
-			'atg-seo'            => array( __( 'SEO & AI Discovery', 'ai-traffic-guardian' ), 'seo-tools.php' ),
-			'atg-alerts'         => array( __( 'Alerts', 'ai-traffic-guardian' ), 'alerts.php' ),
-			'atg-settings'       => array( __( 'Settings', 'ai-traffic-guardian' ), 'settings.php' ),
+			'atg-dashboard'      => array( __( 'Dashboard', 'ai-traffic-guardian' ), 'dashboard.php', 'atg_view_reports' ),
+			'atg-policy'         => array( __( 'AI Policy Matrix', 'ai-traffic-guardian' ), 'policy-matrix.php', 'manage_options' ),
+			'atg-log'            => array( __( 'Traffic Log', 'ai-traffic-guardian' ), 'traffic-log.php', 'atg_view_reports' ),
+			'atg-allowlist'      => array( __( 'Allowlist', 'ai-traffic-guardian' ), 'allowlist.php', 'manage_options' ),
+			'atg-protection'     => array( __( 'Forms & Checkout', 'ai-traffic-guardian' ), 'protection.php', 'manage_options' ),
+			'atg-analytics'      => array( __( 'Analytics Integrity', 'ai-traffic-guardian' ), 'analytics.php', 'manage_options' ),
+			'atg-seo'            => array( __( 'SEO & AI Discovery', 'ai-traffic-guardian' ), 'seo-tools.php', 'manage_options' ),
+			'atg-alerts'         => array( __( 'Alerts', 'ai-traffic-guardian' ), 'alerts.php', 'atg_view_reports' ),
+			'atg-settings'       => array( __( 'Settings', 'ai-traffic-guardian' ), 'settings.php', 'manage_options' ),
 		);
 	}
 
@@ -54,18 +54,19 @@ class ATG_Admin {
 		add_menu_page(
 			__( 'AI Traffic Guardian', 'ai-traffic-guardian' ),
 			__( 'Traffic Guardian', 'ai-traffic-guardian' ) . $badge,
-			'manage_options',
+			'atg_view_reports',
 			'atg-dashboard',
 			array( $this, 'render' ),
 			'dashicons-shield-alt',
 			58
 		);
 		foreach ( self::pages() as $slug => $page ) {
+			$cap = isset( $page[2] ) ? $page[2] : 'manage_options';
 			add_submenu_page(
 				'atg-dashboard',
 				$page[0],
 				$page[0],
-				'manage_options',
+				$cap,
 				$slug,
 				array( $this, 'render' )
 			);
@@ -282,10 +283,6 @@ class ATG_Admin {
 		}
 
 		$env = ATG_Compat::environment();
-		if ( empty( $env['conflicts'] ) ) {
-			return;
-		}
-
 		$user_id   = get_current_user_id();
 		$dismissed = get_user_meta( $user_id, 'atg_dismissed_conflicts', true );
 		if ( ! is_array( $dismissed ) ) {
@@ -300,6 +297,34 @@ class ATG_Admin {
 			}
 			wp_safe_redirect( remove_query_arg( array( 'atg_dismiss_conflict', '_wpnonce' ) ) );
 			exit;
+		}
+
+		// Detect high DB rate-limiter load.
+		if ( ! wp_using_ext_object_cache() && ! in_array( 'no_object_cache', $dismissed, true ) ) {
+			global $wpdb;
+			$stats = ATG_DB::table( 'stats' );
+			$day   = gmdate( 'Y-m-d' );
+			$hits  = (int) $wpdb->get_var( $wpdb->prepare( "SELECT SUM(hits) FROM {$stats} WHERE day = %s", $day ) );
+			$minutes = ( (int) date( 'H' ) * 60 ) + (int) date( 'i' );
+			if ( $minutes < 60 ) {
+				$yesterday = gmdate( 'Y-m-d', time() - DAY_IN_SECONDS );
+				$hits = (int) $wpdb->get_var( $wpdb->prepare( "SELECT SUM(hits) FROM {$stats} WHERE day IN (%s, %s)", $yesterday, $day ) );
+				$minutes = 1440;
+			}
+			$rpm = $minutes > 0 ? ( $hits / $minutes ) : 0;
+
+			if ( $rpm > 500 ) {
+				$dismiss_url = wp_nonce_url( add_query_arg( 'atg_dismiss_conflict', 'no_object_cache' ), 'atg_dismiss_conflict' );
+				echo '<div class="notice notice-warning is-dismissible" style="position:relative;">';
+				echo '<p><strong>' . esc_html__( 'AI Traffic Guardian warning: High database rate-limiting load', 'ai-traffic-guardian' ) . '</strong></p>';
+				echo '<p>' . sprintf( esc_html__( 'Your site is serving approximately %d rpm but is not using a persistent object cache. Rate limiter transients are causing heavy database write load. Action: Install/configure Redis or Memcached.', 'ai-traffic-guardian' ), (int) $rpm ) . '</p>';
+				echo '<p><a href="' . esc_url( $dismiss_url ) . '">' . esc_html__( 'Dismiss this warning', 'ai-traffic-guardian' ) . '</a></p>';
+				echo '</div>';
+			}
+		}
+
+		if ( empty( $env['conflicts'] ) ) {
+			return;
 		}
 
 		foreach ( $env['conflicts'] as $plugin_name ) {

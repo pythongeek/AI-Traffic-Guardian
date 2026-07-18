@@ -86,6 +86,10 @@ if ( ! defined( 'ABSPATH' ) ) {
 				<input type="checkbox" data-setting="log_humans" />
 				<span><?php esc_html_e( 'Log human requests row-by-row (bots are always logged)', 'ai-traffic-guardian' ); ?></span>
 			</label>
+			<label class="atg-switch-row">
+				<input type="checkbox" data-setting="allow_editor_reports" />
+				<span><?php esc_html_e( 'Allow Editor role to view Traffic Guardian reports & dashboard', 'ai-traffic-guardian' ); ?></span>
+			</label>
 			<label class="atg-field-row">
 				<span><?php esc_html_e( 'Log retention (days)', 'ai-traffic-guardian' ); ?></span>
 				<input type="number" min="7" max="365" data-setting="retention_days" />
@@ -97,6 +101,10 @@ if ( ! defined( 'ABSPATH' ) ) {
 			<label class="atg-switch-row">
 				<input type="checkbox" data-setting="alert_email" />
 				<span><?php esc_html_e( 'Also email alerts to the site admin', 'ai-traffic-guardian' ); ?></span>
+			</label>
+			<label class="atg-field-row">
+				<span><?php esc_html_e( 'Webhook URL', 'ai-traffic-guardian' ); ?></span>
+				<input type="url" class="regular-text" data-setting="webhook_url" placeholder="https://hooks.slack.com/services/..." style="max-width:400px;" />
 			</label>
 			<label class="atg-switch-row">
 				<input type="checkbox" data-setting="send_status_header" />

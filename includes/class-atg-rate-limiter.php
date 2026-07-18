@@ -73,7 +73,19 @@ class ATG_Rate_Limiter {
 	 * @return int
 	 */
 	private function hit( $key ) {
-		$t   = 'atg_rl_' . $key;
+		$t = 'atg_rl_' . $key;
+
+		// Fallback to memory-based token bucket (APCu) if persistent cache is missing.
+		if ( ! wp_using_ext_object_cache() && function_exists( 'apcu_exists' ) ) {
+			if ( ! apcu_exists( $t ) ) {
+				apcu_store( $t, 1, 60 );
+				return 1;
+			}
+			$val = (int) apcu_fetch( $t ) + 1;
+			apcu_store( $t, $val, 60 );
+			return $val;
+		}
+
 		$val = get_transient( $t );
 		if ( false === $val ) {
 			set_transient( $t, 1, 60 );

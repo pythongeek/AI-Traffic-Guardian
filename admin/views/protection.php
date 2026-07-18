@@ -38,6 +38,18 @@ if ( ! defined( 'ABSPATH' ) ) {
 				<span><?php esc_html_e( 'WooCommerce checkout', 'ai-traffic-guardian' ); ?></span>
 			</label>
 			<label class="atg-switch-row">
+				<input type="checkbox" data-setting="protect_cf7" />
+				<span><?php esc_html_e( 'Contact Form 7 forms', 'ai-traffic-guardian' ); ?></span>
+			</label>
+			<label class="atg-switch-row">
+				<input type="checkbox" data-setting="protect_gravityforms" />
+				<span><?php esc_html_e( 'Gravity Forms', 'ai-traffic-guardian' ); ?></span>
+			</label>
+			<label class="atg-switch-row">
+				<input type="checkbox" data-setting="protect_wpforms" />
+				<span><?php esc_html_e( 'WPForms', 'ai-traffic-guardian' ); ?></span>
+			</label>
+			<label class="atg-switch-row">
 				<input type="checkbox" data-setting="timing_checks" />
 				<span><?php esc_html_e( 'Timing checks (rejects impossibly-fast submissions)', 'ai-traffic-guardian' ); ?></span>
 			</label>
