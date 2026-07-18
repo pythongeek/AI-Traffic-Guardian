@@ -34,6 +34,9 @@ class ATG_Policy_Engine {
 			'Microsoft'       => array( 'search_engine' => 'allow' ),
 			'DuckDuckGo'      => array( 'search_engine' => 'allow' ),
 			'Apple'           => array( 'search_engine' => 'allow' ),
+			'Sogou'           => array( 'search_engine' => 'allow' ),
+			'Ecosia'          => array( 'search_engine' => 'allow' ),
+			'Qwant'           => array( 'search_engine' => 'allow' ),
 			'OpenAI'          => array(
 				'ai_search'   => 'allow',
 				'agent_proxy' => 'allow',
