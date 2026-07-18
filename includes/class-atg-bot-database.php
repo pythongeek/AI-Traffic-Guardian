@@ -515,6 +515,27 @@ class ATG_Bot_Database {
 			// Uptime monitors — business-critical, allowlist by default.
 			// ------------------------------------------------------------------
 			array(
+				'name'    => 'Google Site Verification',
+				'vendor'  => 'Google',
+				'purpose' => 'monitor',
+				'pattern' => '#Google-Site-Verification|Google-InspectionTool#i',
+				'verify'  => 'none',
+			),
+			array(
+				'name'    => 'Bing Webmaster',
+				'vendor'  => 'Microsoft',
+				'purpose' => 'monitor',
+				'pattern' => '#bingpreview|BingPreview#i',
+				'verify'  => 'none',
+			),
+			array(
+				'name'    => 'Google Lighthouse',
+				'vendor'  => 'Google',
+				'purpose' => 'monitor',
+				'pattern' => '#Chrome-Lighthouse|Google Page Speed#i',
+				'verify'  => 'none',
+			),
+			array(
 				'name'    => 'UptimeRobot',
 				'vendor'  => 'UptimeRobot',
 				'purpose' => 'monitor',
