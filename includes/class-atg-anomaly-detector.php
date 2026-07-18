@@ -18,7 +18,6 @@ class ATG_Anomaly_Detector {
 	public function run() {
 		global $wpdb;
 		$stats     = ATG_DB::table( 'stats' );
-		$threshold = (float) apply_filters( 'atg_anomaly_threshold', 3.0, '', '' );
 		$yesterday = gmdate( 'Y-m-d', strtotime( '-1 day' ) );
 		$week_ago  = gmdate( 'Y-m-d', strtotime( '-8 days' ) );
 
@@ -33,12 +32,11 @@ class ATG_Anomaly_Detector {
 				 WHERE vendor != ''
 				   AND day >= %s
 				 GROUP BY vendor
-				 HAVING avg7 > 0 AND (yesterday / avg7) > %f",
+				 HAVING avg7 > 0",
 				$yesterday,
 				$week_ago,
 				$yesterday,
-				$week_ago,
-				$threshold
+				$week_ago
 			),
 			ARRAY_A
 		);
@@ -46,22 +44,34 @@ class ATG_Anomaly_Detector {
 
 		foreach ( $vendors as $row ) {
 			$ratio = round( $row['yesterday'] / $row['avg7'], 1 );
-			ATG_Plugin::instance()->alerts->create(
-				'anomaly_spike',
-				/* translators: %1$s vendor, %2$s ratio */
-				sprintf(
-					__( '%1$s traffic is %2$sx above its 7-day average', 'ai-traffic-guardian' ),
-					$row['vendor'],
-					$ratio
-				),
-				array(
-					'vendor'    => $row['vendor'],
-					'yesterday' => (int) $row['yesterday'],
-					'avg7'      => round( $row['avg7'], 1 ),
-					'ratio'     => $ratio,
-				)
-			);
-			do_action( 'atg_anomaly_detected', $row['vendor'], $ratio, $row );
+			$purpose = '';
+			foreach ( ATG_Bot_Database::signatures() as $sig ) {
+				if ( $sig['vendor'] === $row['vendor'] ) {
+					$purpose = $sig['purpose'];
+					break;
+				}
+			}
+
+			$threshold = (float) apply_filters( 'atg_anomaly_threshold', 3.0, $row['vendor'], $purpose );
+
+			if ( $ratio > $threshold ) {
+				ATG_Plugin::instance()->alerts->create(
+					'anomaly_spike',
+					/* translators: %1$s vendor, %2$s ratio */
+					sprintf(
+						__( '%1$s traffic is %2$sx above its 7-day average', 'ai-traffic-guardian' ),
+						$row['vendor'],
+						$ratio
+					),
+					array(
+						'vendor'    => $row['vendor'],
+						'yesterday' => (int) $row['yesterday'],
+						'avg7'      => round( $row['avg7'], 1 ),
+						'ratio'     => $ratio,
+					)
+				);
+				do_action( 'atg_anomaly_detected', $row['vendor'], $ratio, $row );
+			}
 		}
 	}
 }
