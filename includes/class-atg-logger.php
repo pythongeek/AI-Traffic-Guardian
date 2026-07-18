@@ -132,6 +132,10 @@ class ATG_Logger {
 			$where[]  = 'action = %s';
 			$params[] = sanitize_text_field( $args['action'] );
 		}
+		if ( isset( $args['spoofed'] ) && '' !== $args['spoofed'] ) {
+			$where[]  = 'spoofed = %d';
+			$params[] = ! empty( $args['spoofed'] ) ? 1 : 0;
+		}
 		if ( ! empty( $args['search'] ) ) {
 			$where[]  = '(ua LIKE %s OR path LIKE %s OR bot_name LIKE %s)';
 			$like     = '%' . $wpdb->esc_like( sanitize_text_field( $args['search'] ) ) . '%';

@@ -34,6 +34,11 @@ if ( ! defined( 'ABSPATH' ) ) {
 				<option value="throttle"><?php esc_html_e( 'Throttled', 'ai-traffic-guardian' ); ?></option>
 				<option value="block"><?php esc_html_e( 'Blocked', 'ai-traffic-guardian' ); ?></option>
 			</select>
+			<select data-filter="spoofed">
+				<option value=""><?php esc_html_e( 'All verifications', 'ai-traffic-guardian' ); ?></option>
+				<option value="1"><?php esc_html_e( 'Spoofed only', 'ai-traffic-guardian' ); ?></option>
+				<option value="0"><?php esc_html_e( 'Non-spoofed', 'ai-traffic-guardian' ); ?></option>
+			</select>
 			<input type="search" data-filter="search" placeholder="<?php esc_attr_e( 'Search UA, path or bot…', 'ai-traffic-guardian' ); ?>" />
 			<button class="button button-primary" data-atg-apply-filters><?php esc_html_e( 'Filter', 'ai-traffic-guardian' ); ?></button>
 		</div>
