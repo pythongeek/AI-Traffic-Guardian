@@ -28,10 +28,28 @@ class ATG_REST {
 	/**
 	 * Permission check for admin endpoints.
 	 *
-	 * @return bool
+	 * @return bool|WP_Error
 	 */
 	public static function can_manage() {
-		return current_user_can( 'manage_options' );
+		if ( ! current_user_can( 'manage_options' ) ) {
+			return false;
+		}
+
+		$user_id = get_current_user_id();
+		if ( $user_id ) {
+			$key   = 'atg_rl_rest_' . $user_id;
+			$count = (int) get_transient( $key );
+			if ( $count >= 10 ) {
+				return new WP_Error(
+					'rest_rate_limited',
+					__( 'Too many requests. Please wait a minute.', 'ai-traffic-guardian' ),
+					array( 'status' => 429 )
+				);
+			}
+			set_transient( $key, $count + 1, MINUTE_IN_SECONDS );
+		}
+
+		return true;
 	}
 
 	/**

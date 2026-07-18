@@ -163,6 +163,11 @@ final class ATG_Plugin {
 		$this->anomaly_detector->hooks();
 		$this->alerts->hooks();
 
+		// GDPR hooks.
+		add_filter( 'wp_privacy_policy_content', array( $this, 'privacy_policy_content' ) );
+		add_filter( 'wp_privacy_personal_data_exporters', array( $this, 'register_exporter' ) );
+		add_filter( 'wp_privacy_personal_data_erasers',   array( $this, 'register_eraser' ) );
+
 		// Cron.
 		add_action( 'atg_cron_daily', array( $this, 'cron_daily' ) );
 		add_action( 'atg_cron_weekly', array( $this->verifier, 'refresh_ip_ranges' ) );
@@ -267,5 +272,81 @@ final class ATG_Plugin {
 			}
 		}
 		return '0.0.0.0';
+	}
+
+	/**
+	 * Add plugin policy text to the privacy policy guide.
+	 *
+	 * @param string $content Privacy policy content.
+	 * @return string
+	 */
+	public function privacy_policy_content( $content ) {
+		$text  = '<h2>' . esc_html__( 'Bot Traffic Detection', 'ai-traffic-guardian' ) . '</h2>';
+		$text .= '<p>' . sprintf(
+			/* translators: 1: hashed/record string, 2: retention days */
+			esc_html__( 'This site uses AI Traffic Guardian to detect and manage automated bot traffic. It may log a %1$s of your IP address, your browser\'s user agent string, and the page paths you visit. This data is retained for %2$s days and is used solely for security and traffic analysis.', 'ai-traffic-guardian' ),
+			$this->get( 'hash_ips', true ) ? esc_html__( 'cryptographic hash', 'ai-traffic-guardian' ) : esc_html__( 'record', 'ai-traffic-guardian' ),
+			esc_html( $this->get( 'retention_days', 30 ) )
+		) . '</p>';
+		return $content . $text;
+	}
+
+	/**
+	 * Register the personal data exporter.
+	 *
+	 * @param array $exporters Registered exporters.
+	 * @return array
+	 */
+	public function register_exporter( $exporters ) {
+		$exporters['atg-traffic-log'] = array(
+			'exporter_friendly_name' => __( 'Bot Traffic Log', 'ai-traffic-guardian' ),
+			'callback'               => array( $this, 'export_personal_data' ),
+		);
+		return $exporters;
+	}
+
+	/**
+	 * Export personal data callback.
+	 *
+	 * @param string $email Email address.
+	 * @param int    $page  Page index.
+	 * @return array
+	 */
+	public function export_personal_data( $email, $page = 1 ) {
+		// We don't store user email, so we return empty by default.
+		return array(
+			'data' => array(),
+			'done' => true,
+		);
+	}
+
+	/**
+	 * Register the personal data eraser.
+	 *
+	 * @param array $erasers Registered erasers.
+	 * @return array
+	 */
+	public function register_eraser( $erasers ) {
+		$erasers['atg-traffic-log'] = array(
+			'eraser_friendly_name' => __( 'Bot Traffic Log', 'ai-traffic-guardian' ),
+			'callback'             => array( $this, 'erase_personal_data' ),
+		);
+		return $erasers;
+	}
+
+	/**
+	 * Erase personal data callback.
+	 *
+	 * @param string $email Email address.
+	 * @param int    $page  Page index.
+	 * @return array
+	 */
+	public function erase_personal_data( $email, $page = 1 ) {
+		return array(
+			'items_removed'  => 0,
+			'items_retained' => 0,
+			'messages'       => array(),
+			'done'           => true,
+		);
 	}
 }
