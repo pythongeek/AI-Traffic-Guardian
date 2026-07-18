@@ -197,10 +197,16 @@ class ATG_Classifier {
 			$base['action']         = in_array( $action, array( 'allow', 'throttle', 'block' ), true ) ? $action : 'throttle';
 			$base['reason']         = 'Unrecognized automated UA';
 			$base['risk']           = 55;
-			$override = $plugin->allowlist->get_path_override( $path );
-			if ( $override ) {
-				$base['action'] = $override;
-				$base['reason'] = 'Path override: ' . $override;
+			$action_filtered = apply_filters( 'atg_path_policy_override', $base['action'], $path, 'Unknown', 'unknown' );
+			if ( $action_filtered !== $base['action'] ) {
+				$base['action'] = $action_filtered;
+				$base['reason'] = 'Filtered path policy override: ' . $action_filtered;
+			} else {
+				$override = $plugin->allowlist->get_path_override( $path );
+				if ( $override ) {
+					$base['action'] = $override;
+					$base['reason'] = 'Path override: ' . $override;
+				}
 			}
 			return $base;
 		}
@@ -257,10 +263,16 @@ class ATG_Classifier {
 				$base['reason']   = 'Identity unverifiable — throttled and logged';
 				$base['action']   = 'throttle';
 				$base['risk']     = 50;
-				$override = $plugin->allowlist->get_path_override( $base['path'] );
-				if ( $override ) {
-					$base['action'] = $override;
-					$base['reason'] = 'Path override: ' . $override;
+				$action_filtered = apply_filters( 'atg_path_policy_override', $base['action'], $base['path'], $sig['vendor'], $sig['purpose'] );
+				if ( $action_filtered !== $base['action'] ) {
+					$base['action'] = $action_filtered;
+					$base['reason'] = 'Filtered path policy override: ' . $action_filtered;
+				} else {
+					$override = $plugin->allowlist->get_path_override( $base['path'] );
+					if ( $override ) {
+						$base['action'] = $override;
+						$base['reason'] = 'Path override: ' . $override;
+					}
 				}
 				return $base;
 			}
@@ -268,10 +280,16 @@ class ATG_Classifier {
 
 		$base['action'] = $plugin->policy->action_for( $sig['vendor'], $sig['purpose'] );
 		$base['reason'] = 'Policy: ' . $sig['vendor'] . ' / ' . $sig['purpose'];
-		$override = $plugin->allowlist->get_path_override( $base['path'] );
-		if ( $override ) {
-			$base['action'] = $override;
-			$base['reason'] = 'Path override: ' . $override;
+		$action_filtered = apply_filters( 'atg_path_policy_override', $base['action'], $base['path'], $sig['vendor'], $sig['purpose'] );
+		if ( $action_filtered !== $base['action'] ) {
+			$base['action'] = $action_filtered;
+			$base['reason'] = 'Filtered path policy override: ' . $action_filtered;
+		} else {
+			$override = $plugin->allowlist->get_path_override( $base['path'] );
+			if ( $override ) {
+				$base['action'] = $override;
+				$base['reason'] = 'Path override: ' . $override;
+			}
 		}
 		return $base;
 	}
