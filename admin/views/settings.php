@@ -106,6 +106,31 @@ if ( ! defined( 'ABSPATH' ) ) {
 	</div>
 
 	<div class="atg-card">
+		<div class="atg-card-head">
+			<h2><?php esc_html_e( 'Cloudflare Integration', 'ai-traffic-guardian' ); ?></h2>
+			<p class="description"><?php esc_html_e( 'Edge protection. Pushes blocked IPs directly to a Cloudflare IP List to offload CPU and network costs.', 'ai-traffic-guardian' ); ?></p>
+		</div>
+		<div class="atg-form-grid">
+			<label class="atg-switch-row">
+				<input type="checkbox" data-setting="cloudflare_enabled" />
+				<span><?php esc_html_e( 'Enable Cloudflare Edge Push', 'ai-traffic-guardian' ); ?></span>
+			</label>
+			<label class="atg-field-row">
+				<span><?php esc_html_e( 'API Token', 'ai-traffic-guardian' ); ?></span>
+				<input type="password" data-setting="cloudflare_api_token" style="max-width:400px;" />
+			</label>
+			<label class="atg-field-row">
+				<span><?php esc_html_e( 'Account ID', 'ai-traffic-guardian' ); ?></span>
+				<input type="text" data-setting="cloudflare_account_id" style="max-width:400px;" />
+			</label>
+			<label class="atg-field-row">
+				<span><?php esc_html_e( 'IP List ID', 'ai-traffic-guardian' ); ?></span>
+				<input type="text" data-setting="cloudflare_ip_list_id" style="max-width:400px;" />
+			</label>
+		</div>
+	</div>
+
+	<div class="atg-card">
 		<div class="atg-card-head"><h2><?php esc_html_e( 'Environment', 'ai-traffic-guardian' ); ?></h2></div>
 		<table class="atg-table" data-atg-env>
 			<tbody><tr><td class="atg-empty"><?php esc_html_e( 'Loading…', 'ai-traffic-guardian' ); ?></td></tr></tbody>

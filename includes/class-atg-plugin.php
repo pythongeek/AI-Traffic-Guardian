@@ -48,6 +48,7 @@ final class ATG_Plugin {
 	public $compat;
 	public $custom_signatures;
 	public $anomaly_detector;
+	public $cloudflare;
 
 	/**
 	 * Get singleton.
@@ -73,6 +74,11 @@ final class ATG_Plugin {
 			'shadow_started'        => 0,
 			'shadow_days'           => 7,
 			'staging_mode'          => false,
+			// Cloudflare Integration.
+			'cloudflare_enabled'    => false,
+			'cloudflare_api_token'  => '',
+			'cloudflare_account_id' => '',
+			'cloudflare_ip_list_id' => '',
 			// Authenticated users are always treated as human (gap-analysis P0).
 			'auth_bypass'           => true,
 			// What to do with traffic we cannot classify.
@@ -146,6 +152,7 @@ final class ATG_Plugin {
 		$this->compat       = new ATG_Compat();
 		$this->custom_signatures = new ATG_Custom_Signatures();
 		$this->anomaly_detector  = new ATG_Anomaly_Detector();
+		$this->cloudflare        = new ATG_Cloudflare();
 
 		// Schema self-healing: run on every boot so REST requests and front-end
 		// pages always have tables available, even if activation failed earlier.
@@ -164,6 +171,7 @@ final class ATG_Plugin {
 		$this->compat->hooks();
 		$this->custom_signatures->hooks();
 		$this->anomaly_detector->hooks();
+		$this->cloudflare->hooks();
 		$this->alerts->hooks();
 
 		// GDPR hooks.
