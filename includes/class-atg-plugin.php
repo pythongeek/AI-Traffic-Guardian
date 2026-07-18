@@ -126,7 +126,9 @@ final class ATG_Plugin {
 	 * Boot all modules.
 	 */
 	public function boot() {
-		$this->settings = wp_parse_args( get_option( 'atg_settings', array() ), self::default_settings() );
+		$network_settings = is_multisite() ? get_site_option( 'atg_network_settings', array() ) : array();
+		$local_settings   = get_option( 'atg_settings', array() );
+		$this->settings   = wp_parse_args( $local_settings, wp_parse_args( $network_settings, self::default_settings() ) );
 
 		$this->bot_db       = new ATG_Bot_Database();
 		$this->verifier     = new ATG_Verifier();

@@ -73,7 +73,11 @@ class ATG_Activator {
 		global $wp_rewrite;
 		if ( $wp_rewrite instanceof WP_Rewrite ) {
 			ATG_Llms::register_rewrite();
-			flush_rewrite_rules();
+			if ( did_action( 'init' ) > 0 ) {
+				flush_rewrite_rules();
+			} else {
+				add_action( 'shutdown', 'flush_rewrite_rules' );
+			}
 		}
 	}
 }

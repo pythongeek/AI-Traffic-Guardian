@@ -38,6 +38,7 @@ class ATG_Admin {
 	 */
 	public function hooks() {
 		add_action( 'admin_menu', array( $this, 'menu' ) );
+		add_action( 'network_admin_menu', array( $this, 'network_menu' ) );
 		add_action( 'admin_enqueue_scripts', array( $this, 'assets' ) );
 		add_filter( 'plugin_action_links_' . ATG_PLUGIN_BASENAME, array( $this, 'action_links' ) );
 	}
@@ -171,5 +172,103 @@ class ATG_Admin {
 		$url = admin_url( 'admin.php?page=atg-dashboard' );
 		array_unshift( $links, '<a href="' . esc_url( $url ) . '">' . esc_html__( 'Dashboard', 'ai-traffic-guardian' ) . '</a>' );
 		return $links;
+	}
+
+	/**
+	 * Register the network menu.
+	 */
+	public function network_menu() {
+		add_menu_page(
+			__( 'AI Traffic Guardian Network Settings', 'ai-traffic-guardian' ),
+			__( 'Traffic Guardian', 'ai-traffic-guardian' ),
+			'manage_network_options',
+			'atg-network-settings',
+			array( $this, 'render_network_page' ),
+			'dashicons-shield-alt',
+			25
+		);
+	}
+
+	/**
+	 * Render network options screen.
+	 */
+	public function render_network_page() {
+		if ( ! current_user_can( 'manage_network_options' ) ) {
+			wp_die( esc_html__( 'Access denied.', 'ai-traffic-guardian' ) );
+		}
+		if ( isset( $_POST['submit'] ) && check_admin_referer( 'atg-network-settings' ) ) {
+			$settings = isset( $_POST['settings'] ) ? (array) $_POST['settings'] : array();
+			$defaults = ATG_Plugin::default_settings();
+			$clean    = array();
+			foreach ( $defaults as $key => $default ) {
+				if ( isset( $settings[ $key ] ) ) {
+					if ( is_bool( $default ) ) {
+						$clean[ $key ] = '1' === $settings[ $key ];
+					} elseif ( is_int( $default ) ) {
+						$clean[ $key ] = (int) $settings[ $key ];
+					} else {
+						$clean[ $key ] = sanitize_text_field( $settings[ $key ] );
+					}
+				} else {
+					if ( is_bool( $default ) ) {
+						$clean[ $key ] = false;
+					}
+				}
+			}
+			update_site_option( 'atg_network_settings', $clean );
+			echo '<div class="updated"><p>' . esc_html__( 'Network baseline settings saved.', 'ai-traffic-guardian' ) . '</p></div>';
+		}
+
+		$settings = get_site_option( 'atg_network_settings', array() );
+		$defaults = ATG_Plugin::default_settings();
+		$settings = wp_parse_args( $settings, $defaults );
+		?>
+		<div class="wrap">
+			<h1><?php esc_html_e( 'AI Traffic Guardian — Network Baseline Settings', 'ai-traffic-guardian' ); ?></h1>
+			<form method="post" action="">
+				<?php wp_nonce_field( 'atg-network-settings' ); ?>
+				<table class="form-table">
+					<tr>
+						<th scope="row"><?php esc_html_e( 'Default Enforcement Mode', 'ai-traffic-guardian' ); ?></th>
+						<td>
+							<select name="settings[enforcement]">
+								<option value="shadow" <?php selected( $settings['enforcement'], 'shadow' ); ?>><?php esc_html_e( 'Shadow Mode', 'ai-traffic-guardian' ); ?></option>
+								<option value="active" <?php selected( $settings['enforcement'], 'active' ); ?>><?php esc_html_e( 'Active Enforcement', 'ai-traffic-guardian' ); ?></option>
+								<option value="off" <?php selected( $settings['enforcement'], 'off' ); ?>><?php esc_html_e( 'Off (Paused)', 'ai-traffic-guardian' ); ?></option>
+							</select>
+						</td>
+					</tr>
+					<tr>
+						<th scope="row"><?php esc_html_e( 'Auth Bypass', 'ai-traffic-guardian' ); ?></th>
+						<td>
+							<label>
+								<input type="checkbox" name="settings[auth_bypass]" value="1" <?php checked( $settings['auth_bypass'] ); ?> />
+								<?php esc_html_e( 'Authenticated users bypass bot classification', 'ai-traffic-guardian' ); ?>
+							</label>
+						</td>
+					</tr>
+					<tr>
+						<th scope="row"><?php esc_html_e( 'Rate Limiting', 'ai-traffic-guardian' ); ?></th>
+						<td>
+							<label>
+								<input type="checkbox" name="settings[rate_enabled]" value="1" <?php checked( $settings['rate_enabled'] ); ?> />
+								<?php esc_html_e( 'Enable progressive rate limiting by default', 'ai-traffic-guardian' ); ?>
+							</label>
+						</td>
+					</tr>
+					<tr>
+						<th scope="row"><?php esc_html_e( 'Hash IPs', 'ai-traffic-guardian' ); ?></th>
+						<td>
+							<label>
+								<input type="checkbox" name="settings[hash_ips]" value="1" <?php checked( $settings['hash_ips'] ); ?> />
+								<?php esc_html_e( 'Hash IPs in logs (GDPR compliance)', 'ai-traffic-guardian' ); ?>
+							</label>
+						</td>
+					</tr>
+				</table>
+				<?php submit_button( __( 'Save Network Settings', 'ai-traffic-guardian' ) ); ?>
+			</form>
+		</div>
+		<?php
 	}
 }

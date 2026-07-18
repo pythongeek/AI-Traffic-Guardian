@@ -621,10 +621,15 @@
 	 * ALLOWLIST
 	 * ======================================================= */
 	function initAllowlist() {
+		var pathRules = [];
+
 		api('allowlist').then(function (data) {
 			document.querySelector('[data-atg-ips]').value = (data.allowlist.ips || []).join('\n');
 			document.querySelector('[data-atg-paths]').value = (data.allowlist.paths || []).join('\n');
 			document.querySelector('[data-atg-uas]').value = (data.allowlist.uas || []).join('\n');
+			pathRules = data.allowlist.path_rules || [];
+			renderPathRules();
+
 			var tags = document.querySelector('[data-atg-protected-paths]');
 			if (tags) {
 				tags.innerHTML = (data.protected || []).map(function (p) {
@@ -632,6 +637,44 @@
 				}).join('');
 			}
 		}).catch(function () { toast(cfg.i18n.error, true); });
+
+		function renderPathRules() {
+			var tbody = document.querySelector('#atg-path-rules-table tbody');
+			if (!tbody) return;
+			if (!pathRules.length) {
+				tbody.innerHTML = '<tr><td colspan="3" class="atg-empty">No path overrides defined yet.</td></tr>';
+				return;
+			}
+			tbody.innerHTML = pathRules.map(function (rule, idx) {
+				return '<tr>' +
+					'<td><code>' + esc(rule.path) + '</code></td>' +
+					'<td><span class="atg-pill atg-pill-' + esc(rule.action) + '">' + esc(rule.action) + '</span></td>' +
+					'<td><button type="button" class="button atg-remove-path-rule" data-idx="' + idx + '">Remove</button></td>' +
+					'</tr>';
+			}).join('');
+
+			tbody.querySelectorAll('.atg-remove-path-rule').forEach(function (btn) {
+				btn.addEventListener('click', function () {
+					var idx = parseInt(btn.getAttribute('data-idx'), 10);
+					pathRules.splice(idx, 1);
+					renderPathRules();
+				});
+			});
+		}
+
+		var addRuleBtn = document.getElementById('atg-add-path-rule-btn');
+		if (addRuleBtn) {
+			addRuleBtn.addEventListener('click', function () {
+				var pathInput = document.getElementById('atg-new-path-rule-path');
+				var actionInput = document.getElementById('atg-new-path-rule-action');
+				var pathVal = pathInput.value.trim();
+				var actionVal = actionInput.value;
+				if (!pathVal) return;
+				pathRules.push({ path: pathVal, action: actionVal });
+				pathInput.value = '';
+				renderPathRules();
+			});
+		}
 
 		var save = document.querySelector('[data-atg-save-allowlist]');
 		if (save) {
@@ -644,7 +687,8 @@
 					body: {
 						ips: lines('[data-atg-ips]'),
 						paths: lines('[data-atg-paths]'),
-						uas: lines('[data-atg-uas]')
+						uas: lines('[data-atg-uas]'),
+						path_rules: pathRules
 					}
 				}).then(function () { toast(cfg.i18n.saved); })
 				  .catch(function () { toast(cfg.i18n.error, true); });

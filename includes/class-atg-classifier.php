@@ -170,6 +170,11 @@ class ATG_Classifier {
 			$base['action']         = in_array( $action, array( 'allow', 'throttle', 'block' ), true ) ? $action : 'throttle';
 			$base['reason']         = 'Unrecognized automated UA';
 			$base['risk']           = 55;
+			$override = $plugin->allowlist->get_path_override( $path );
+			if ( $override ) {
+				$base['action'] = $override;
+				$base['reason'] = 'Path override: ' . $override;
+			}
 			return $base;
 		}
 
@@ -225,12 +230,22 @@ class ATG_Classifier {
 				$base['reason']   = 'Identity unverifiable — throttled and logged';
 				$base['action']   = 'throttle';
 				$base['risk']     = 50;
+				$override = $plugin->allowlist->get_path_override( $base['path'] );
+				if ( $override ) {
+					$base['action'] = $override;
+					$base['reason'] = 'Path override: ' . $override;
+				}
 				return $base;
 			}
 		}
 
 		$base['action'] = $plugin->policy->action_for( $sig['vendor'], $sig['purpose'] );
 		$base['reason'] = 'Policy: ' . $sig['vendor'] . ' / ' . $sig['purpose'];
+		$override = $plugin->allowlist->get_path_override( $base['path'] );
+		if ( $override ) {
+			$base['action'] = $override;
+			$base['reason'] = 'Path override: ' . $override;
+		}
 		return $base;
 	}
 

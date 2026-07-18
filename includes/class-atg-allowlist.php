@@ -23,9 +23,10 @@ class ATG_Allowlist {
 	 */
 	public static function defaults() {
 		return array(
-			'ips'   => array(),   // User-defined IPs / CIDRs.
-			'paths' => array(),   // User-defined path prefixes.
-			'uas'   => array(),   // User-defined UA substrings.
+			'ips'        => array(),   // User-defined IPs / CIDRs.
+			'paths'      => array(),   // User-defined path prefixes.
+			'uas'        => array(),   // User-defined UA substrings.
+			'path_rules' => array(),   // User-defined path override rules.
 		);
 	}
 
@@ -69,6 +70,16 @@ class ATG_Allowlist {
 		foreach ( array( 'ips', 'paths', 'uas' ) as $k ) {
 			if ( isset( $data[ $k ] ) && is_array( $data[ $k ] ) ) {
 				$clean[ $k ] = array_values( array_filter( array_map( 'trim', array_map( 'sanitize_text_field', $data[ $k ] ) ) ) );
+			}
+		}
+		if ( isset( $data['path_rules'] ) && is_array( $data['path_rules'] ) ) {
+			foreach ( $data['path_rules'] as $rule ) {
+				if ( ! empty( $rule['path'] ) && ! empty( $rule['action'] ) ) {
+					$clean['path_rules'][] = array(
+						'path'   => sanitize_text_field( $rule['path'] ),
+						'action' => in_array( $rule['action'], array( 'allow', 'throttle', 'block' ), true ) ? $rule['action'] : 'allow',
+					);
+				}
 			}
 		}
 		update_option( 'atg_allowlist', $clean );
@@ -149,6 +160,23 @@ class ATG_Allowlist {
 		}
 		if ( defined( 'DOING_AJAX' ) && DOING_AJAX && is_user_logged_in() ) {
 			return 'Authenticated AJAX';
+		}
+		return false;
+	}
+
+	/**
+	 * Get override action for a request path if matched.
+	 *
+	 * @param string $path Request URI.
+	 * @return string|false
+	 */
+	public function get_path_override( $path ) {
+		$list  = $this->get();
+		$rules = isset( $list['path_rules'] ) ? (array) $list['path_rules'] : array();
+		foreach ( $rules as $rule ) {
+			if ( ! empty( $rule['path'] ) && 0 === stripos( $path, $rule['path'] ) ) {
+				return $rule['action'];
+			}
 		}
 		return false;
 	}
