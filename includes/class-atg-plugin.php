@@ -46,6 +46,7 @@ final class ATG_Plugin {
 	public $robots;
 	public $llms;
 	public $compat;
+	public $custom_signatures;
 
 	/**
 	 * Get singleton.
@@ -139,6 +140,7 @@ final class ATG_Plugin {
 		$this->robots       = new ATG_Robots();
 		$this->llms         = new ATG_Llms();
 		$this->compat       = new ATG_Compat();
+		$this->custom_signatures = new ATG_Custom_Signatures();
 
 		// Schema self-healing: run on every boot so REST requests and front-end
 		// pages always have tables available, even if activation failed earlier.
@@ -155,6 +157,7 @@ final class ATG_Plugin {
 		$this->robots->hooks();
 		$this->llms->hooks();
 		$this->compat->hooks();
+		$this->custom_signatures->hooks();
 		$this->alerts->hooks();
 
 		// Cron.

@@ -100,6 +100,23 @@ class ATG_REST {
 			'callback' => array( __CLASS__, 'set_settings' ),
 		) ) );
 
+		register_rest_route( self::NS, '/custom-signatures', array_merge( $admin, array(
+			'methods'  => 'GET',
+			'callback' => array( __CLASS__, 'get_custom_signatures' ),
+		) ) );
+		register_rest_route( self::NS, '/custom-signatures', array_merge( $admin, array(
+			'methods'  => 'POST',
+			'callback' => array( __CLASS__, 'add_custom_signature' ),
+		) ) );
+		register_rest_route( self::NS, '/custom-signatures/(?P<index>\d+)', array_merge( $admin, array(
+			'methods'  => 'POST',
+			'callback' => array( __CLASS__, 'update_custom_signature' ),
+		) ) );
+		register_rest_route( self::NS, '/custom-signatures/(?P<index>\d+)', array_merge( $admin, array(
+			'methods'  => 'DELETE',
+			'callback' => array( __CLASS__, 'delete_custom_signature' ),
+		) ) );
+
 		register_rest_route( self::NS, '/robots-preview', array_merge( $admin, array(
 			'methods'  => 'GET',
 			'callback' => array( __CLASS__, 'robots_preview' ),
@@ -478,6 +495,62 @@ class ATG_REST {
 			),
 			200
 		);
+	}
+
+	/**
+	 * Get custom signatures.
+	 *
+	 * @return WP_REST_Response
+	 */
+	public static function get_custom_signatures() {
+		$custom = ATG_Plugin::instance()->custom_signatures->get_all();
+		return new WP_REST_Response( array( 'signatures' => $custom ), 200 );
+	}
+
+	/**
+	 * Add custom signature.
+	 *
+	 * @param WP_REST_Request $req Request.
+	 * @return WP_REST_Response|WP_Error
+	 */
+	public static function add_custom_signature( WP_REST_Request $req ) {
+		$params = $req->get_json_params();
+		$result = ATG_Plugin::instance()->custom_signatures->add( $params );
+		if ( is_wp_error( $result ) ) {
+			return $result;
+		}
+		return new WP_REST_Response( array( 'ok' => true ), 200 );
+	}
+
+	/**
+	 * Update custom signature.
+	 *
+	 * @param WP_REST_Request $req Request.
+	 * @return WP_REST_Response|WP_Error
+	 */
+	public static function update_custom_signature( WP_REST_Request $req ) {
+		$index  = (int) $req->get_param( 'index' );
+		$params = $req->get_json_params();
+		$result = ATG_Plugin::instance()->custom_signatures->update( $index, $params );
+		if ( is_wp_error( $result ) ) {
+			return $result;
+		}
+		return new WP_REST_Response( array( 'ok' => true ), 200 );
+	}
+
+	/**
+	 * Delete custom signature.
+	 *
+	 * @param WP_REST_Request $req Request.
+	 * @return WP_REST_Response|WP_Error
+	 */
+	public static function delete_custom_signature( WP_REST_Request $req ) {
+		$index  = (int) $req->get_param( 'index' );
+		$result = ATG_Plugin::instance()->custom_signatures->delete( $index );
+		if ( ! $result ) {
+			return new WP_Error( 'delete_failed', __( 'Could not delete signature.', 'ai-traffic-guardian' ), array( 'status' => 400 ) );
+		}
+		return new WP_REST_Response( array( 'ok' => true ), 200 );
 	}
 
 	/**

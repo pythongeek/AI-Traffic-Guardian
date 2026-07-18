@@ -271,6 +271,7 @@
 	 * ======================================================= */
 	function initPolicy() {
 		var state = { matrix: {}, signatures: [], purposes: {} };
+		var customSignatures = [];
 
 		api('policy').then(function (data) {
 			state.matrix = data.matrix;
@@ -278,7 +279,197 @@
 			state.purposes = data.purposes;
 			renderPresets(data.presets);
 			renderMatrix();
+			initCustomSignaturesForm();
+			loadCustomSignatures();
 		}).catch(function () { toast(cfg.i18n.error, true); });
+
+		function initCustomSignaturesForm() {
+			var purposeSel = document.getElementById('atg-sig-purpose');
+			if (purposeSel) {
+				purposeSel.innerHTML = Object.keys(state.purposes).map(function (k) {
+					return '<option value="' + esc(k) + '">' + esc(state.purposes[k]) + '</option>';
+				}).join('');
+			}
+
+			var verifySel = document.getElementById('atg-sig-verify');
+			if (verifySel) {
+				verifySel.addEventListener('change', function () {
+					var val = verifySel.value;
+					document.querySelectorAll('.atg-sig-verify-extra').forEach(function (el) {
+						el.style.display = 'none';
+					});
+					if (val === 'rdns') {
+						var rdnsEx = document.querySelector('.rdns-extra');
+						if (rdnsEx) rdnsEx.style.display = 'block';
+					} else if (val === 'ip_range') {
+						var ipEx = document.querySelector('.ip-range-extra');
+						if (ipEx) ipEx.style.display = 'block';
+					}
+				});
+			}
+
+			var addBtn = document.getElementById('atg-add-custom-sig-btn');
+			if (addBtn) {
+				addBtn.addEventListener('click', function () {
+					showForm();
+				});
+			}
+
+			var cancelBtn = document.getElementById('atg-cancel-sig-btn');
+			if (cancelBtn) {
+				cancelBtn.addEventListener('click', function () {
+					hideForm();
+				});
+			}
+
+			var form = document.getElementById('atg-custom-sig-form');
+			if (form) {
+				form.addEventListener('submit', function (e) {
+					e.preventDefault();
+					saveCustomSignature();
+				});
+			}
+		}
+
+		function showForm(sig, index) {
+			var formWrap = document.getElementById('atg-custom-sig-form-wrap');
+			if (!formWrap) return;
+			formWrap.style.display = 'block';
+			
+			var titleEl = document.getElementById('atg-form-title');
+			var indexEl = document.getElementById('atg-sig-index');
+			var nameEl = document.getElementById('atg-sig-name');
+			var vendorEl = document.getElementById('atg-sig-vendor');
+			var purposeEl = document.getElementById('atg-sig-purpose');
+			var patternEl = document.getElementById('atg-sig-pattern');
+			var verifyEl = document.getElementById('atg-sig-verify');
+			var rdnsEl = document.getElementById('atg-sig-rdns');
+			var ipSourceEl = document.getElementById('atg-sig-ip-source');
+
+			if (sig && index !== undefined) {
+				titleEl.textContent = 'Edit Custom Signature';
+				indexEl.value = index;
+				nameEl.value = sig.name || '';
+				vendorEl.value = sig.vendor || '';
+				purposeEl.value = sig.purpose || '';
+				patternEl.value = sig.pattern || '';
+				verifyEl.value = sig.verify || 'none';
+				rdnsEl.value = (sig.rdns_suffix || []).join(', ');
+				ipSourceEl.value = sig.ip_source || '';
+			} else {
+				titleEl.textContent = 'Add Custom Signature';
+				indexEl.value = '';
+				nameEl.value = '';
+				vendorEl.value = '';
+				purposeEl.value = Object.keys(state.purposes)[0] || '';
+				patternEl.value = '';
+				verifyEl.value = 'none';
+				rdnsEl.value = '';
+				ipSourceEl.value = '';
+			}
+
+			var event = new Event('change');
+			verifyEl.dispatchEvent(event);
+		}
+
+		function hideForm() {
+			var formWrap = document.getElementById('atg-custom-sig-form-wrap');
+			if (formWrap) {
+				formWrap.style.display = 'none';
+			}
+		}
+
+		function loadCustomSignatures() {
+			var tbody = document.querySelector('#atg-custom-signatures-table tbody');
+			if (!tbody) return;
+			api('custom-signatures').then(function (data) {
+				customSignatures = data.signatures || [];
+				if (!customSignatures.length) {
+					tbody.innerHTML = '<tr><td colspan="6" class="atg-empty">No custom signatures defined yet.</td></tr>';
+					return;
+				}
+				tbody.innerHTML = customSignatures.map(function (sig, idx) {
+					var verifyText = sig.verify === 'rdns' ? 'rDNS' : (sig.verify === 'ip_range' ? 'IP range' : 'None');
+					return '<tr>' +
+						'<td><strong>' + esc(sig.name) + '</strong></td>' +
+						'<td>' + esc(sig.vendor) + '</td>' +
+						'<td>' + esc(state.purposes[sig.purpose] || sig.purpose) + '</td>' +
+						'<td><code>' + esc(sig.pattern) + '</code></td>' +
+						'<td>' + esc(verifyText) + '</td>' +
+						'<td>' +
+							'<button type="button" class="button atg-edit-custom-sig" data-idx="' + idx + '">Edit</button> ' +
+							'<button type="button" class="button atg-delete-custom-sig" style="color:#dc2626;" data-idx="' + idx + '">Delete</button>' +
+						'</td>' +
+						'</tr>';
+				}).join('');
+
+				tbody.querySelectorAll('.atg-edit-custom-sig').forEach(function (btn) {
+					btn.addEventListener('click', function () {
+						var idx = parseInt(btn.getAttribute('data-idx'), 10);
+						showForm(customSignatures[idx], idx);
+					});
+				});
+
+				tbody.querySelectorAll('.atg-delete-custom-sig').forEach(function (btn) {
+					btn.addEventListener('click', function () {
+						if (!confirm('Are you sure you want to delete this custom signature?')) return;
+						var idx = parseInt(btn.getAttribute('data-idx'), 10);
+						api('custom-signatures/' + idx, { method: 'DELETE' }).then(function () {
+							toast(cfg.i18n.saved);
+							hideForm();
+							return reloadAll();
+						}).catch(function () { toast(cfg.i18n.error, true); });
+					});
+				});
+			}).catch(function () {
+				tbody.innerHTML = '<tr><td colspan="6" class="atg-empty is-error">Failed to load custom signatures.</td></tr>';
+			});
+		}
+
+		function saveCustomSignature() {
+			var index = document.getElementById('atg-sig-index').value;
+			var name = document.getElementById('atg-sig-name').value;
+			var vendor = document.getElementById('atg-sig-vendor').value;
+			var purpose = document.getElementById('atg-sig-purpose').value;
+			var pattern = document.getElementById('atg-sig-pattern').value;
+			var verify = document.getElementById('atg-sig-verify').value;
+			var rdnsVal = document.getElementById('atg-sig-rdns').value;
+			var ipSource = document.getElementById('atg-sig-ip-source').value;
+
+			var rdnsSuffix = rdnsVal.split(',').map(function (s) { return s.trim(); }).filter(Boolean);
+
+			var payload = {
+				name: name,
+				vendor: vendor,
+				purpose: purpose,
+				pattern: pattern,
+				verify: verify,
+				rdns_suffix: rdnsSuffix,
+				ip_source: ipSource
+			};
+
+			var url = 'custom-signatures';
+			if (index !== '') {
+				url += '/' + index;
+			}
+
+			api(url, { method: 'POST', body: payload }).then(function () {
+				toast(cfg.i18n.saved);
+				hideForm();
+				reloadAll();
+			}).catch(function (err) {
+				toast(cfg.i18n.error, true);
+			});
+		}
+
+		function reloadAll() {
+			return api('policy').then(function (data) {
+				state.matrix = data.matrix;
+				state.signatures = data.signatures;
+				renderMatrix();
+				loadCustomSignatures();
+			});
+		}
 
 		function renderPresets(presets) {
 			var wrap = document.querySelector('[data-atg-presets]');
@@ -296,11 +487,7 @@
 					api('policy/preset', { method: 'POST', body: { preset: btn.getAttribute('data-preset') } })
 						.then(function () {
 							toast(cfg.i18n.saved);
-							return api('policy');
-						})
-						.then(function (data) {
-							state.matrix = data.matrix;
-							renderMatrix();
+							return reloadAll();
 						})
 						.catch(function () { toast(cfg.i18n.error, true); });
 				});
