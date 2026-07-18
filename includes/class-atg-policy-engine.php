@@ -109,6 +109,12 @@ class ATG_Policy_Engine {
 		$publisher = $apply( $base, 'ai_search', 'allow' );
 		$publisher = $apply( $publisher, 'agent_proxy', 'allow' );
 		$publisher = $apply( $publisher, 'ai_training', 'throttle' );
+		if ( isset( $publisher['OpenAI'] ) ) {
+			$publisher['OpenAI']['ai_training'] = 'block';
+		}
+		if ( isset( $publisher['Common Crawl'] ) ) {
+			$publisher['Common Crawl']['ai_training'] = 'block';
+		}
 
 		// WooCommerce: performance-first — block training, throttle SEO tools.
 		$woo = $apply( $base, 'ai_training', 'block' );
