@@ -153,10 +153,7 @@ class ATG_Compat {
 		// Performance benchmark: average exec_ms from recent classified requests (Section 8.7).
 		global $wpdb;
 		$perf = $wpdb->get_row(
-			$wpdb->prepare(
-				'SELECT AVG(exec_ms) AS avg_ms, MAX(exec_ms) AS max_ms, COUNT(*) AS sample_size FROM (SELECT exec_ms FROM %i WHERE exec_ms > 0 ORDER BY id DESC LIMIT 500) AS recent',
-				ATG_DB::table( 'log' )
-			)
+			'SELECT AVG(exec_ms) AS avg_ms, MAX(exec_ms) AS max_ms, COUNT(*) AS sample_size FROM (SELECT exec_ms FROM ' . ATG_DB::table( 'log' ) . ' WHERE exec_ms > 0 ORDER BY id DESC LIMIT 500) AS recent'
 		);
 		$report['performance'] = array(
 			'avg_exec_ms'        => $perf ? round( (float) $perf->avg_ms, 2 ) : 0,

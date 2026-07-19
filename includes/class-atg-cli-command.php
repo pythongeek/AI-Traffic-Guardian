@@ -80,8 +80,7 @@ class ATG_CLI_Command {
 		$from  = gmdate( 'Y-m-d', strtotime( "-{$days} days" ) );
 		$rows  = $wpdb->get_results(
 			$wpdb->prepare(
-				'SELECT vendor, SUM(hits) AS total FROM %i WHERE vendor != \'\' AND day >= %s GROUP BY vendor ORDER BY total DESC LIMIT 20',
-				ATG_DB::table( 'stats' ),
+				'SELECT vendor, SUM(hits) AS total FROM ' . ATG_DB::table( 'stats' ) . ' WHERE vendor != \'\' AND day >= %s GROUP BY vendor ORDER BY total DESC LIMIT 20',
 				$from
 			),
 			ARRAY_A

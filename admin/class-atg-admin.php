@@ -361,11 +361,11 @@ class ATG_Admin {
 		if ( ! wp_using_ext_object_cache() && ! in_array( 'no_object_cache', $dismissed, true ) ) {
 			global $wpdb;
 			$day     = gmdate( 'Y-m-d' );
-			$hits    = (int) $wpdb->get_var( $wpdb->prepare( 'SELECT SUM(hits) FROM %i WHERE day = %s', ATG_DB::table( 'stats' ), $day ) );
+			$hits    = (int) $wpdb->get_var( $wpdb->prepare( 'SELECT SUM(hits) FROM ' . ATG_DB::table( 'stats' ) . ' WHERE day = %s', $day ) );
 			$minutes = ( (int) gmdate( 'H' ) * 60 ) + (int) gmdate( 'i' );
 			if ( $minutes < 60 ) {
 				$yesterday = gmdate( 'Y-m-d', time() - DAY_IN_SECONDS );
-				$hits      = (int) $wpdb->get_var( $wpdb->prepare( 'SELECT SUM(hits) FROM %i WHERE day IN (%s, %s)', ATG_DB::table( 'stats' ), $yesterday, $day ) );
+				$hits      = (int) $wpdb->get_var( $wpdb->prepare( 'SELECT SUM(hits) FROM ' . ATG_DB::table( 'stats' ) . ' WHERE day IN (%s, %s)', $yesterday, $day ) );
 				$minutes   = 1440;
 			}
 			$rpm = $minutes > 0 ? ( $hits / $minutes ) : 0;

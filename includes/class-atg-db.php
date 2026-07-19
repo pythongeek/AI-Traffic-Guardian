@@ -125,16 +125,14 @@ class ATG_DB {
 		$days = max( 1, absint( $days ) );
 		$deleted = (int) $wpdb->query(
 			$wpdb->prepare(
-				'DELETE FROM %i WHERE ts < DATE_SUB(%s, INTERVAL %d DAY)',
-				self::table( 'log' ),
+				'DELETE FROM ' . self::table( 'log' ) . ' WHERE ts < DATE_SUB(%s, INTERVAL %d DAY)',
 				current_time( 'mysql' ),
 				$days
 			)
 		);
 		$wpdb->query(
 			$wpdb->prepare(
-				'DELETE FROM %i WHERE day < DATE_SUB(%s, INTERVAL %d DAY)',
-				self::table( 'stats' ),
+				'DELETE FROM ' . self::table( 'stats' ) . ' WHERE day < DATE_SUB(%s, INTERVAL %d DAY)',
 				current_time( 'mysql' ),
 				max( $days, 90 )
 			)
@@ -149,10 +147,7 @@ class ATG_DB {
 		global $wpdb;
 		foreach ( array( 'log', 'stats', 'alerts' ) as $t ) {
 			$wpdb->query(
-				$wpdb->prepare(
-					'DROP TABLE IF EXISTS %i',
-					self::table( $t )
-				)
+				'DROP TABLE IF EXISTS ' . self::table( $t )
 			);
 		}
 	}

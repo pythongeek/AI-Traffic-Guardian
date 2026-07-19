@@ -92,10 +92,9 @@ class ATG_Logger {
 		foreach ( $rows as $r ) {
 			$wpdb->query(
 				$wpdb->prepare(
-					'INSERT INTO %i (day, classification, vendor, purpose, action, country, hits)
+					'INSERT INTO ' . ATG_DB::table( 'stats' ) . ' (day, classification, vendor, purpose, action, country, hits)
 					 VALUES (%s, %s, %s, %s, %s, %s, 1)
 					 ON DUPLICATE KEY UPDATE hits = hits + 1',
-					ATG_DB::table( 'stats' ),
 					$day,
 					$r['classification'],
 					$r['vendor'],
@@ -153,28 +152,24 @@ class ATG_Logger {
 		if ( $params ) {
 			$total = (int) $wpdb->get_var(
 				$wpdb->prepare(
-					"SELECT COUNT(*) FROM %i WHERE {$where_sql}",
-					array_merge( array( $table ), $params )
+					"SELECT COUNT(*) FROM {$table} WHERE {$where_sql}",
+					$params
 				)
 			);
 			$rows  = $wpdb->get_results(
 				$wpdb->prepare(
-					"SELECT * FROM %i WHERE {$where_sql} ORDER BY id DESC LIMIT %d OFFSET %d",
-					array_merge( array( $table ), $params, array( $per_page, $offset ) )
+					"SELECT * FROM {$table} WHERE {$where_sql} ORDER BY id DESC LIMIT %d OFFSET %d",
+					array_merge( $params, array( $per_page, $offset ) )
 				),
 				ARRAY_A
 			);
 		} else {
 			$total = (int) $wpdb->get_var(
-				$wpdb->prepare(
-					'SELECT COUNT(*) FROM %i WHERE 1=1',
-					$table
-				)
+				"SELECT COUNT(*) FROM {$table} WHERE 1=1"
 			);
 			$rows  = $wpdb->get_results(
 				$wpdb->prepare(
-					'SELECT * FROM %i WHERE 1=1 ORDER BY id DESC LIMIT %d OFFSET %d',
-					$table,
+					"SELECT * FROM {$table} WHERE 1=1 ORDER BY id DESC LIMIT %d OFFSET %d",
 					$per_page,
 					$offset
 				),

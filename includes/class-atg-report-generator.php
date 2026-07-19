@@ -34,8 +34,7 @@ class ATG_Report_Generator {
 		// 1. Get hits by classification.
 		$classes = $wpdb->get_results(
 			$wpdb->prepare(
-				"SELECT classification, SUM(hits) AS total FROM %i WHERE day >= %s GROUP BY classification",
-				$stats_table,
+				"SELECT classification, SUM(hits) AS total FROM {$stats_table} WHERE day >= %s GROUP BY classification",
 				$from_date
 			),
 			ARRAY_A
@@ -58,8 +57,7 @@ class ATG_Report_Generator {
 		// 2. Get top 5 vendors.
 		$vendors = $wpdb->get_results(
 			$wpdb->prepare(
-				"SELECT vendor, SUM(hits) AS total FROM %i WHERE vendor != '' AND day >= %s GROUP BY vendor ORDER BY total DESC LIMIT 5",
-				$stats_table,
+				"SELECT vendor, SUM(hits) AS total FROM {$stats_table} WHERE vendor != '' AND day >= %s GROUP BY vendor ORDER BY total DESC LIMIT 5",
 				$from_date
 			),
 			ARRAY_A
@@ -75,8 +73,7 @@ class ATG_Report_Generator {
 		if ( ! $googlebot_hits ) {
 			$googlebot_hits = (int) $wpdb->get_var(
 				$wpdb->prepare(
-					"SELECT SUM(hits) FROM %i WHERE LOWER(vendor) = 'google' AND day >= %s",
-					$stats_table,
+					"SELECT SUM(hits) FROM {$stats_table} WHERE LOWER(vendor) = 'google' AND day >= %s",
 					$from_date
 				)
 			);

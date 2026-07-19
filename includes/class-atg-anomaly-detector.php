@@ -27,7 +27,7 @@ class ATG_Anomaly_Detector {
 				'SELECT vendor,
 						SUM(CASE WHEN day = %s THEN hits ELSE 0 END) AS yesterday,
 						AVG(CASE WHEN day >= %s AND day < %s THEN hits ELSE NULL END) AS avg7
-				 FROM %i
+				 FROM ' . ATG_DB::table( 'stats' ) . '
 				 WHERE vendor != \'\'
 				   AND day >= %s
 				 GROUP BY vendor
@@ -35,7 +35,6 @@ class ATG_Anomaly_Detector {
 				$yesterday,
 				$week_ago,
 				$yesterday,
-				ATG_DB::table( 'stats' ),
 				$week_ago
 			),
 			ARRAY_A

@@ -39,8 +39,7 @@ class ATG_Alerts {
 			$first_of_month = gmdate( 'Y-m-01 00:00:00' );
 			$count = (int) $wpdb->get_var(
 				$wpdb->prepare(
-					"SELECT COUNT(*) FROM %i WHERE created >= %s",
-					ATG_DB::table( 'alerts' ),
+					"SELECT COUNT(*) FROM " . ATG_DB::table( 'alerts' ) . " WHERE created >= %s",
 					$first_of_month
 				)
 			);
@@ -104,9 +103,9 @@ class ATG_Alerts {
 	public function list( $status = 'open', $limit = 100 ) {
 		global $wpdb;
 		if ( 'all' === $status ) {
-			return $wpdb->get_results( $wpdb->prepare( 'SELECT * FROM %i ORDER BY id DESC LIMIT %d', ATG_DB::table( 'alerts' ), (int) $limit ), ARRAY_A );
+			return $wpdb->get_results( $wpdb->prepare( 'SELECT * FROM ' . ATG_DB::table( 'alerts' ) . ' ORDER BY id DESC LIMIT %d', (int) $limit ), ARRAY_A );
 		}
-		return $wpdb->get_results( $wpdb->prepare( 'SELECT * FROM %i WHERE status = %s ORDER BY id DESC LIMIT %d', ATG_DB::table( 'alerts' ), $status, (int) $limit ), ARRAY_A );
+		return $wpdb->get_results( $wpdb->prepare( 'SELECT * FROM ' . ATG_DB::table( 'alerts' ) . ' WHERE status = %s ORDER BY id DESC LIMIT %d', $status, (int) $limit ), ARRAY_A );
 	}
 
 	/**
@@ -126,7 +125,7 @@ class ATG_Alerts {
 	 */
 	public function open_count() {
 		global $wpdb;
-		return (int) $wpdb->get_var( $wpdb->prepare( 'SELECT COUNT(*) FROM %i WHERE status = %s', ATG_DB::table( 'alerts' ), 'open' ) );
+		return (int) $wpdb->get_var( $wpdb->prepare( 'SELECT COUNT(*) FROM ' . ATG_DB::table( 'alerts' ) . ' WHERE status = %s', 'open' ) );
 	}
 
 	/**
