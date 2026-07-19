@@ -965,6 +965,179 @@
 		});
 	}
 
+	/* =========================================================
+	 * BOT SECURITY AUDIT
+	 * ======================================================= */
+	function initAudit() {
+		var runBtn = document.getElementById('atg-run-audit');
+		var rerunBtn = document.getElementById('atg-rerun-audit');
+		var launcher = document.getElementById('atg-audit-launcher');
+		var progressSec = document.getElementById('atg-audit-progress');
+		var progressFill = document.getElementById('atg-progress-fill');
+		var progressLabel = document.getElementById('atg-progress-label');
+		var results = document.getElementById('atg-audit-results');
+
+		function run() {
+			if (launcher) launcher.hidden = true;
+			if (results) results.hidden = true;
+			if (progressSec) progressSec.hidden = false;
+			if (progressFill) progressFill.style.width = '0%';
+			if (progressLabel) progressLabel.textContent = 'Running diagnostics...';
+
+			var progress = 0;
+			var interval = setInterval(function() {
+				if (progress < 90) {
+					progress += Math.floor(Math.random() * 15) + 5;
+					if (progress > 90) progress = 90;
+					if (progressFill) progressFill.style.width = progress + '%';
+					if (progressLabel) {
+						if (progress > 60) {
+							progressLabel.textContent = 'Checking robots.txt and security headers...';
+						} else if (progress > 30) {
+							progressLabel.textContent = 'Analyzing database schema and traffic data...';
+						}
+					}
+				}
+			}, 300);
+
+			api('audit', { method: 'POST' }).then(function(data) {
+				clearInterval(interval);
+				if (progressFill) progressFill.style.width = '100%';
+				if (progressLabel) progressLabel.textContent = 'Audit complete!';
+
+				setTimeout(function() {
+					if (progressSec) progressSec.hidden = true;
+					renderResults(data);
+					if (results) results.hidden = false;
+				}, 500);
+			}).catch(function() {
+				clearInterval(interval);
+				if (progressSec) progressSec.hidden = true;
+				if (launcher) launcher.hidden = false;
+				toast(cfg.i18n.error, true);
+			});
+		}
+
+		if (runBtn) runBtn.addEventListener('click', run);
+		if (rerunBtn) rerunBtn.addEventListener('click', run);
+
+		function renderResults(data) {
+			// Score card
+			var gradeEl = document.getElementById('atg-score-grade');
+			var numEl = document.getElementById('atg-score-number');
+			var labelEl = document.getElementById('atg-score-label');
+			var metaEl = document.getElementById('atg-score-meta');
+
+			if (gradeEl) {
+				gradeEl.textContent = data.grade.letter;
+				gradeEl.style.backgroundColor = data.grade.color;
+			}
+			if (numEl) numEl.textContent = data.score + '%';
+			if (labelEl) labelEl.textContent = 'Overall protection score: ' + data.grade.label;
+			if (metaEl) metaEl.textContent = 'Generated: ' + data.generated;
+
+			// Counts
+			var failCount = 0;
+			var warnCount = 0;
+			var passCount = 0;
+			var priorityActions = [];
+
+			var fullReportHtml = '';
+
+			Object.keys(data.sections).forEach(function(secKey) {
+				var sec = data.sections[secKey];
+				var secHtml = '<div class="atg-card atg-audit-section">';
+				secHtml += '<div class="atg-card-head" style="display:flex; justify-content:space-between; align-items:center;">';
+				secHtml += '<h2><span class="dashicons dashicons-' + esc(sec.icon) + '" style="margin-right:8px;vertical-align:text-bottom;"></span>' + esc(sec.label) + '</h2>';
+				secHtml += '</div>';
+				secHtml += '<ul class="atg-audit-checks-list" style="margin-top:15px;list-style:none;padding:0;margin-bottom:0;">';
+
+				sec.checks.forEach(function(check) {
+					if (check.status === 'fail') failCount++;
+					if (check.status === 'warning') warnCount++;
+					if (check.status === 'pass') passCount++;
+
+					var statusClass = 'atg-check-' + check.status;
+					var icon = 'yes-alt';
+					if (check.status === 'fail') icon = 'dismiss';
+					if (check.status === 'warning') icon = 'warning';
+					if (check.status === 'info') icon = 'info';
+
+					secHtml += '<li class="' + statusClass + '" style="padding:12px 0;border-bottom:1px solid #f1f5f9;display:flex;gap:12px;align-items:flex-start;">';
+					secHtml += '<span class="dashicons dashicons-' + icon + '" style="margin-top:2px;"></span>';
+					secHtml += '<div style="flex:1;">';
+					secHtml += '<strong style="font-size:14px;">' + esc(check.label) + '</strong>';
+					secHtml += '<p class="description" style="margin:5px 0 0 0;font-size:13px;line-height:1.5;">' + esc(check.detail) + '</p>';
+
+					if (check.fix) {
+						priorityActions.push(check);
+						secHtml += '<div class="atg-audit-fix" style="margin-top:10px;background:#f8fafc;padding:12px;border-radius:6px;border-left:3px solid #cbd5e1;">';
+						secHtml += '<strong style="display:block;margin-bottom:5px;color:#475569;font-size:13px;"><span class="dashicons dashicons-hammer" style="font-size:16px;width:16px;height:16px;margin-right:5px;vertical-align:text-bottom;"></span>How to fix: ' + esc(check.fix.title) + '</strong>';
+						secHtml += '<ol style="margin:0;padding-left:18px;font-size:12px;line-height:1.6;color:#334155;">';
+						check.fix.steps.forEach(function(step) {
+							secHtml += '<li>' + esc(step) + '</li>';
+						});
+						secHtml += '</ol>';
+						secHtml += '</div>';
+					}
+
+					secHtml += '</div>';
+					secHtml += '</li>';
+				});
+
+				secHtml += '</ul></div>';
+				fullReportHtml += secHtml;
+			});
+
+			var scFail = document.getElementById('sc-fail');
+			var scWarn = document.getElementById('sc-warn');
+			var scPass = document.getElementById('sc-pass');
+
+			if (scFail) scFail.innerHTML = '<span class="dashicons dashicons-dismiss"></span> ' + failCount + ' — critical';
+			if (scWarn) scWarn.innerHTML = '<span class="dashicons dashicons-warning"></span> ' + warnCount + ' — warnings';
+			if (scPass) scPass.innerHTML = '<span class="dashicons dashicons-yes-alt"></span> ' + passCount + ' — passing';
+
+			// Priority actions
+			var priorityWrap = document.getElementById('atg-priority-wrap');
+			var priorityList = document.getElementById('atg-priority-list');
+			if (priorityWrap && priorityList) {
+				if (priorityActions.length > 0) {
+					priorityWrap.hidden = false;
+					priorityList.innerHTML = priorityActions.map(function(check) {
+						var labelColor = check.status === 'fail' ? 'var(--atg-red)' : 'var(--atg-amber)';
+						var badgeBg = check.status === 'fail' ? 'var(--atg-red-soft)' : 'var(--atg-amber-soft)';
+						var itemHtml = '<div class="atg-priority-action" style="padding:15px 0;border-bottom:1px solid #f1f5f9;">';
+						itemHtml += '<div style="display:flex;align-items:center;gap:10px;margin-bottom:8px;">';
+						itemHtml += '<span style="font-weight:700;font-size:10px;padding:2px 8px;border-radius:4px;color:' + labelColor + ';background-color:' + badgeBg + ';border:1px solid ' + labelColor + ';text-transform:uppercase;">' + check.status + '</span>';
+						itemHtml += '<strong style="font-size:14px;">' + esc(check.label) + '</strong>';
+						itemHtml += '</div>';
+						itemHtml += '<p class="description" style="margin:0 0 10px 0;font-size:13px;line-height:1.5;">' + esc(check.detail) + '</p>';
+
+						if (check.fix) {
+							itemHtml += '<div style="background:#f8fafc;padding:12px;border-radius:6px;border-left:3px solid ' + labelColor + ';">';
+							itemHtml += '<strong style="display:block;margin-bottom:5px;color:#475569;font-size:13px;"><span class="dashicons dashicons-hammer" style="font-size:16px;width:16px;height:16px;margin-right:5px;vertical-align:text-bottom;"></span>Fix instructions: ' + esc(check.fix.title) + '</strong>';
+							itemHtml += '<ol style="margin:0;padding-left:18px;font-size:12px;line-height:1.6;color:#334155;">';
+							check.fix.steps.forEach(function(step) {
+								itemHtml += '<li>' + esc(step) + '</li>';
+							});
+							itemHtml += '</ol>';
+							itemHtml += '</div>';
+						}
+						itemHtml += '</div>';
+						return itemHtml;
+					}).join('');
+				} else {
+					priorityWrap.hidden = true;
+				}
+			}
+
+			var fullReport = document.getElementById('atg-full-report');
+			if (fullReport) fullReport.innerHTML = fullReportHtml;
+			var stamp = document.getElementById('atg-audit-timestamp');
+			if (stamp) stamp.textContent = 'Last audit: ' + data.generated;
+		}
+	}
+
 	/* ---------------- Router ---------------- */
 	document.addEventListener('DOMContentLoaded', function () {
 		switch (page) {
@@ -973,6 +1146,7 @@
 			case 'atg-log': initLog(); break;
 			case 'atg-allowlist': initAllowlist(); break;
 			case 'atg-alerts': initAlerts(); break;
+			case 'atg-audit': initAudit(); break;
 			case 'atg-protection':
 			case 'atg-analytics':
 			case 'atg-seo':

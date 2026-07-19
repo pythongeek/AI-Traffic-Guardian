@@ -391,3 +391,128 @@
 	text-decoration: underline;
 }
 
+/* ---------- Audit Page ---------- */
+.atg-audit-launcher {
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	gap: 20px;
+	padding: 24px;
+	background: var(--atg-card);
+	border: 1px solid var(--atg-line);
+	border-radius: var(--atg-radius);
+	margin-bottom: 20px;
+}
+.atg-audit-prompt {
+	display: flex;
+	gap: 16px;
+	align-items: center;
+}
+.atg-audit-prompt h3 {
+	margin: 0 0 6px 0;
+	font-size: 16px;
+	font-weight: 700;
+}
+.atg-audit-prompt p {
+	margin: 0;
+	color: var(--atg-muted);
+}
+.atg-audit-icon {
+	font-size: 36px;
+	width: 36px;
+	height: 36px;
+	color: var(--atg-brand);
+}
+.atg-audit-progress {
+	padding: 24px;
+	text-align: center;
+}
+.atg-progress-bar-wrap {
+	background: #f1f5f9;
+	border-radius: 999px;
+	height: 10px;
+	overflow: hidden;
+	margin-bottom: 12px;
+}
+.atg-progress-bar {
+	background: var(--atg-brand);
+	height: 100%;
+	width: 0;
+	transition: width 0.3s ease;
+	border-radius: 999px;
+}
+.atg-progress-label {
+	margin: 0;
+	font-size: 13px;
+	font-weight: 600;
+	color: var(--atg-muted);
+}
+.atg-audit-score-card {
+	display: flex;
+	align-items: center;
+	gap: 24px;
+	padding: 24px;
+	margin-bottom: 20px;
+}
+.atg-score-grade {
+	width: 64px;
+	height: 64px;
+	border-radius: 50%;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	color: #fff;
+	font-size: 32px;
+	font-weight: 900;
+	text-shadow: 0 2px 4px rgba(0,0,0,.15);
+	flex-shrink: 0;
+}
+.atg-score-detail {
+	flex: 1;
+}
+.atg-score-number {
+	font-size: 32px;
+	font-weight: 800;
+	color: var(--atg-ink);
+	line-height: 1.1;
+	margin-bottom: 4px;
+}
+.atg-score-label {
+	margin: 0 0 2px 0;
+	font-size: 14px;
+	font-weight: 600;
+	color: var(--atg-ink);
+}
+.atg-score-meta {
+	margin: 0;
+	font-size: 12px;
+	color: var(--atg-muted);
+}
+.atg-score-counts {
+	display: flex;
+	flex-direction: column;
+	gap: 8px;
+}
+.atg-sc {
+	display: inline-flex;
+	align-items: center;
+	gap: 6px;
+	font-size: 13px;
+	font-weight: 600;
+}
+.atg-sc .dashicons {
+	font-size: 16px;
+	width: 16px;
+	height: 16px;
+}
+.atg-sc.fail { color: var(--atg-red); }
+.atg-sc.warning { color: var(--atg-amber); }
+.atg-sc.pass { color: var(--atg-green); }
+
+.atg-check-fail .dashicons { color: var(--atg-red) !important; }
+.atg-check-warning .dashicons { color: var(--atg-amber) !important; }
+.atg-check-pass .dashicons { color: var(--atg-green) !important; }
+.atg-check-info .dashicons { color: var(--atg-brand) !important; }
+.atg-check-skip .dashicons { color: var(--atg-muted) !important; }
+
+

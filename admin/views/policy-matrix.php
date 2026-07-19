@@ -11,9 +11,19 @@ if ( ! defined( 'ABSPATH' ) ) {
 ?>
 <div class="atg-page" id="atg-policy">
 
+	<!-- ── Page explanation ───────────────────────────────────────────────── -->
+	<div class="atg-explainer">
+		<div class="atg-explainer-icon"><span class="dashicons dashicons-groups"></span></div>
+		<div class="atg-explainer-text">
+			<h2><?php esc_html_e( 'Your bot guest list', 'ai-traffic-guardian' ); ?></h2>
+			<p><?php esc_html_e( 'Think of this page like a guest list for a party. Some robots are on the VIP list (like Googlebot — it helps people find your website in search results, so you definitely want it in). Some you want to slow down so they don\'t hog your bandwidth. And some you want to turn away at the door. Each row is one type of robot. You pick: Allow, Throttle (slow down), or Block. Changes take effect immediately.', 'ai-traffic-guardian' ); ?></p>
+		</div>
+	</div>
+
 	<div class="atg-card">
 		<div class="atg-card-head">
-			<h2><?php esc_html_e( 'One-click policy presets', 'ai-traffic-guardian' ); ?></h2>
+			<h2><?php esc_html_e( 'Quick-start presets', 'ai-traffic-guardian' ); ?></h2>
+			<p class="description"><?php esc_html_e( 'Not sure where to start? Pick the preset that describes your site. You can fine-tune individual bots below afterward.', 'ai-traffic-guardian' ); ?></p>
 		</div>
 		<div class="atg-presets" data-atg-presets>
 			<div class="atg-empty"><?php esc_html_e( 'Loading…', 'ai-traffic-guardian' ); ?></div>
@@ -41,22 +51,55 @@ if ( ! defined( 'ABSPATH' ) ) {
 			<h2><?php esc_html_e( 'Granular policy matrix', 'ai-traffic-guardian' ); ?></h2>
 			<p class="description"><?php esc_html_e( 'Vendor × purpose control. Changes save instantly and feed both the enforcement engine and robots.txt.', 'ai-traffic-guardian' ); ?></p>
 		</div>
+
+		<!-- Column guide -->
+		<div class="atg-matrix-guide">
+			<div class="atg-guide-item">
+				<strong><?php esc_html_e( 'Bot', 'ai-traffic-guardian' ); ?></strong>
+				<p><?php esc_html_e( 'The specific robot\'s name.', 'ai-traffic-guardian' ); ?></p>
+			</div>
+			<div class="atg-guide-item">
+				<strong><?php esc_html_e( 'Company', 'ai-traffic-guardian' ); ?></strong>
+				<p><?php esc_html_e( 'Who owns the robot.', 'ai-traffic-guardian' ); ?></p>
+			</div>
+			<div class="atg-guide-item">
+				<strong><?php esc_html_e( 'Purpose', 'ai-traffic-guardian' ); ?></strong>
+				<p><?php esc_html_e( 'What it\'s doing on your site — search indexing, AI training, link previews etc.', 'ai-traffic-guardian' ); ?></p>
+			</div>
+			<div class="atg-guide-item">
+				<strong><?php esc_html_e( 'Verification', 'ai-traffic-guardian' ); ?></strong>
+				<p><?php esc_html_e( 'How we confirm the bot is who it claims to be. "DNS verify" = gold standard. "Unverifiable" = we throttle it instead of trusting it blindly.', 'ai-traffic-guardian' ); ?></p>
+			</div>
+			<div class="atg-guide-item">
+				<strong><?php esc_html_e( 'Policy', 'ai-traffic-guardian' ); ?></strong>
+				<p><?php esc_html_e( 'Your choice. Allow = let it in. Throttle = slow it down. Block = turn it away.', 'ai-traffic-guardian' ); ?></p>
+			</div>
+		</div>
+
 		<div class="atg-matrix-wrap">
 			<table class="atg-table atg-matrix" data-atg-matrix>
 				<thead>
 					<tr>
 						<th><?php esc_html_e( 'Bot', 'ai-traffic-guardian' ); ?></th>
-						<th><?php esc_html_e( 'Vendor', 'ai-traffic-guardian' ); ?></th>
+						<th><?php esc_html_e( 'Company', 'ai-traffic-guardian' ); ?></th>
 						<th><?php esc_html_e( 'Purpose', 'ai-traffic-guardian' ); ?></th>
 						<th><?php esc_html_e( 'Verification', 'ai-traffic-guardian' ); ?></th>
 						<th><?php esc_html_e( 'Policy', 'ai-traffic-guardian' ); ?></th>
 					</tr>
 				</thead>
-				<tbody><tr><td colspan="5" class="atg-empty"><?php esc_html_e( 'Loading…', 'ai-traffic-guardian' ); ?></td></tr></tbody>
+				<tbody><tr><td colspan="5" class="atg-empty"><?php esc_html_e( 'Loading your policy settings…', 'ai-traffic-guardian' ); ?></td></tr></tbody>
 			</table>
 		</div>
+
+		<div class="atg-matrix-legend">
+			<span class="atg-pill atg-pill-allow">Allow</span> <?php esc_html_e( '= full access', 'ai-traffic-guardian' ); ?> &nbsp;
+			<span class="atg-pill atg-pill-throttle">Throttle</span> <?php esc_html_e( '= add a delay + send robots.txt Crawl-delay', 'ai-traffic-guardian' ); ?> &nbsp;
+			<span class="atg-pill atg-pill-block">Block</span> <?php esc_html_e( '= 403 response + Disallow: / in robots.txt', 'ai-traffic-guardian' ); ?>
+		</div>
+
 		<p class="description atg-matrix-note">
-			<?php esc_html_e( 'Identity rules: bots that fail verification are treated as spoofers (blocked). Bots whose identity cannot be verified are throttled and logged, never silently trusted.', 'ai-traffic-guardian' ); ?>
+			<strong><?php esc_html_e( 'About verification:', 'ai-traffic-guardian' ); ?></strong>
+			<?php esc_html_e( 'A bot that claims to be Googlebot but fails the DNS identity check is treated as a spoofer and blocked automatically — your policy setting doesn\'t matter in that case. Bots whose identity cannot be checked are throttled and logged instead of being trusted.', 'ai-traffic-guardian' ); ?>
 		</p>
 	</div>
 

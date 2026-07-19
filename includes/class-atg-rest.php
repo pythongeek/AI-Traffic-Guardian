@@ -183,6 +183,11 @@ class ATG_REST {
 			'callback' => array( __CLASS__, 'debug_replay' ),
 		) ) );
 
+		register_rest_route( self::NS, '/audit', array_merge( $admin, array(
+			'methods'  => 'POST',
+			'callback' => array( __CLASS__, 'run_audit' ),
+		) ) );
+
 		// Public beacon (rate-limited, no nonce — it only marks a session as
 		// human-confirmed; it cannot change any setting).
 		register_rest_route( self::NS, '/beacon', array(
@@ -1075,5 +1080,16 @@ class ATG_REST {
 		}
 
 		return new WP_REST_Response( $data, 200 );
+	}
+
+	/**
+	 * Run a full bot protection audit and return the structured report.
+	 *
+	 * @return WP_REST_Response
+	 */
+	public static function run_audit() {
+		$audit  = new ATG_Bot_Audit();
+		$report = $audit->run();
+		return new WP_REST_Response( $report, 200 );
 	}
 }

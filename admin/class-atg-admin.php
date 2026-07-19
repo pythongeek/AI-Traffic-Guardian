@@ -28,6 +28,7 @@ class ATG_Admin {
 			'atg-protection'     => array( __( 'Forms & Checkout', 'ai-traffic-guardian' ), 'protection.php', 'manage_options' ),
 			'atg-analytics'      => array( __( 'Analytics Integrity', 'ai-traffic-guardian' ), 'analytics.php', 'manage_options' ),
 			'atg-seo'            => array( __( 'SEO & AI Discovery', 'ai-traffic-guardian' ), 'seo-tools.php', 'manage_options' ),
+			'atg-audit'          => array( __( 'Bot Security Audit', 'ai-traffic-guardian' ), 'bot-audit.php', 'manage_options' ),
 			'atg-alerts'         => array( __( 'Alerts', 'ai-traffic-guardian' ), 'alerts.php', 'atg_view_reports' ),
 			'atg-settings'       => array( __( 'Settings', 'ai-traffic-guardian' ), 'settings.php', 'manage_options' ),
 			'atg-edge'           => array( __( 'Edge Setup', 'ai-traffic-guardian' ), 'edge-setup.php', 'manage_options' ),

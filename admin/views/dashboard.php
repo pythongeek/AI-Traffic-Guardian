@@ -23,6 +23,15 @@ if ( isset( $_POST['atg_license_nonce'] ) && wp_verify_nonce( sanitize_key( $_PO
 ?>
 <div class="atg-page" id="atg-dashboard">
 
+	<!-- ── Page explanation ───────────────────────────────────────────────── -->
+	<div class="atg-explainer">
+		<div class="atg-explainer-icon"><span class="dashicons dashicons-visibility"></span></div>
+		<div class="atg-explainer-text">
+			<h2><?php esc_html_e( 'Your control room', 'ai-traffic-guardian' ); ?></h2>
+			<p><?php esc_html_e( 'This is like a security camera screen. Every visitor to your website — real person or computer program (bot) — shows up here. The numbers tell you how many real people visited vs. how many were bots, and what happened to them. Nothing on this page is made-up: all data comes from your actual traffic.', 'ai-traffic-guardian' ); ?></p>
+		</div>
+	</div>
+
 	<!-- Header and Mode Toggles -->
 	<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px; border-bottom:1px solid #e2e8f0; padding-bottom:10px;">
 		<nav class="nav-tab-wrapper atg-tabs" style="margin-bottom: 0; border: none; display: flex; gap: 15px;">
@@ -69,8 +78,8 @@ if ( isset( $_POST['atg_license_nonce'] ) && wp_verify_nonce( sanitize_key( $_PO
 		<div class="atg-shadow-banner" data-atg-shadow-banner hidden>
 			<div class="atg-shadow-icon"><span class="dashicons dashicons-visibility"></span></div>
 			<div class="atg-shadow-text">
-				<strong><?php esc_html_e( 'Shadow mode is on', 'ai-traffic-guardian' ); ?></strong>
-				<p><?php esc_html_e( 'Every decision below is being recorded but nothing is blocked yet. Review what would have happened, then switch to Active enforcement when you are confident.', 'ai-traffic-guardian' ); ?></p>
+				<strong><?php esc_html_e( 'Shadow mode is on — watching, not blocking', 'ai-traffic-guardian' ); ?></strong>
+				<p><?php esc_html_e( 'Every decision in the charts below is being recorded but nothing is being blocked yet. This is intentional: review what would have happened for a few days, check the Traffic Log for any real visitors that look like they would have been wrongly flagged, then go live when you\'re confident.', 'ai-traffic-guardian' ); ?></p>
 				<p class="atg-shadow-countdown" data-atg-shadow-countdown></p>
 			</div>
 			<div class="atg-shadow-actions">
@@ -106,27 +115,27 @@ if ( isset( $_POST['atg_license_nonce'] ) && wp_verify_nonce( sanitize_key( $_PO
 		</div>
 
 		<div class="atg-kpis" data-atg-kpis>
-			<div class="atg-kpi">
+			<div class="atg-kpi" title="<?php esc_attr_e( 'All requests seen by WordPress in the selected period — bots and humans combined.', 'ai-traffic-guardian' ); ?>">
 				<span class="atg-kpi-label"><?php esc_html_e( 'Total requests', 'ai-traffic-guardian' ); ?></span>
 				<span class="atg-kpi-value" data-kpi="total">—</span>
 			</div>
-			<div class="atg-kpi">
+			<div class="atg-kpi" title="<?php esc_attr_e( 'Percentage of traffic that was identified as a bot rather than a real human visitor.', 'ai-traffic-guardian' ); ?>">
 				<span class="atg-kpi-label"><?php esc_html_e( 'Bot share', 'ai-traffic-guardian' ); ?></span>
 				<span class="atg-kpi-value" data-kpi="bot_share">—</span>
 			</div>
-			<div class="atg-kpi atg-kpi-block">
+			<div class="atg-kpi atg-kpi-block" title="<?php esc_attr_e( 'Requests that were turned away with a 403 error. In shadow mode, this shows what WOULD have been blocked.', 'ai-traffic-guardian' ); ?>">
 				<span class="atg-kpi-label"><?php esc_html_e( 'Blocked', 'ai-traffic-guardian' ); ?></span>
 				<span class="atg-kpi-value" data-kpi="blocked">—</span>
 			</div>
-			<div class="atg-kpi atg-kpi-throttle">
+			<div class="atg-kpi atg-kpi-throttle" title="<?php esc_attr_e( 'Requests slowed down with a small delay. In shadow mode, this shows what WOULD have been throttled.', 'ai-traffic-guardian' ); ?>">
 				<span class="atg-kpi-label"><?php esc_html_e( 'Throttled', 'ai-traffic-guardian' ); ?></span>
 				<span class="atg-kpi-value" data-kpi="throttled">—</span>
 			</div>
-			<div class="atg-kpi atg-kpi-human">
-				<span class="atg-kpi-label"><?php esc_html_e( 'Human-equivalent', 'ai-traffic-guardian' ); ?></span>
+			<div class="atg-kpi atg-kpi-human" title="<?php esc_attr_e( 'Requests from real people, logged-in users, and trusted services. These are always allowed through.', 'ai-traffic-guardian' ); ?>">
+				<span class="atg-kpi-label"><?php esc_html_e( 'Human traffic', 'ai-traffic-guardian' ); ?></span>
 				<span class="atg-kpi-value" data-kpi="human_eq">—</span>
 			</div>
-			<div class="atg-kpi atg-kpi-alert">
+			<div class="atg-kpi atg-kpi-alert" title="<?php esc_attr_e( 'New bot signatures that have appeared in your traffic and need your attention.', 'ai-traffic-guardian' ); ?>">
 				<span class="atg-kpi-label"><?php esc_html_e( 'Open alerts', 'ai-traffic-guardian' ); ?></span>
 				<span class="atg-kpi-value" data-kpi="alerts">—</span>
 			</div>
@@ -138,14 +147,22 @@ if ( isset( $_POST['atg_license_nonce'] ) && wp_verify_nonce( sanitize_key( $_PO
 				<div class="atg-card">
 					<div class="atg-card-head">
 						<h2><?php esc_html_e( 'Traffic over time', 'ai-traffic-guardian' ); ?></h2>
+						<span class="atg-help-tip" title="<?php esc_attr_e( 'Stacked lines show each type of visitor per day. Green areas are real people. Blue/orange/red areas are different kinds of bots. Taller bars mean more traffic.', 'ai-traffic-guardian' ); ?>">?</span>
 					</div>
-					<div class="atg-chart-wrap"><canvas id="atg-chart-series"></canvas></div>
+					<div class="atg-chart-empty-state" id="atg-chart-series-empty" hidden>
+						<p><?php esc_html_e( 'No traffic data yet for this time range. This chart will fill in as your site receives visitors.', 'ai-traffic-guardian' ); ?></p>
+					</div>
+					<div class="atg-chart-wrap" id="atg-chart-series-wrap"><canvas id="atg-chart-series"></canvas></div>
 				</div>
 				<div class="atg-card">
 					<div class="atg-card-head">
 						<h2><?php esc_html_e( 'Bot traffic by category', 'ai-traffic-guardian' ); ?></h2>
+						<span class="atg-help-tip" title="<?php esc_attr_e( 'Each slice shows what KIND of bot visited. Search engines help people find you (usually welcome). AI training crawlers copy your content for AI models. Scrapers are usually unwanted.', 'ai-traffic-guardian' ); ?>">?</span>
 					</div>
-					<div class="atg-chart-wrap"><canvas id="atg-chart-purpose"></canvas></div>
+					<div class="atg-chart-empty-state" id="atg-chart-purpose-empty" hidden>
+						<p><?php esc_html_e( 'No bot categories to display yet. Bot categories will appear here once classified traffic is recorded.', 'ai-traffic-guardian' ); ?></p>
+					</div>
+					<div class="atg-chart-wrap" id="atg-chart-purpose-wrap"><canvas id="atg-chart-purpose"></canvas></div>
 				</div>
 			</div>
 
@@ -153,6 +170,7 @@ if ( isset( $_POST['atg_license_nonce'] ) && wp_verify_nonce( sanitize_key( $_PO
 				<div class="atg-card">
 					<div class="atg-card-head">
 						<h2><?php esc_html_e( 'Top AI vendors in your traffic', 'ai-traffic-guardian' ); ?></h2>
+						<span class="atg-help-tip" title="<?php esc_attr_e( 'Shows which AI companies\' bots are visiting most often. OpenAI, Anthropic, Google etc. all have bots that crawl the web.', 'ai-traffic-guardian' ); ?>">?</span>
 					</div>
 					<table class="atg-table" data-atg-vendors>
 						<thead>
@@ -203,12 +221,13 @@ if ( isset( $_POST['atg_license_nonce'] ) && wp_verify_nonce( sanitize_key( $_PO
 		</div>
 
 		<div class="atg-card atg-next-steps" style="margin-top:20px;">
-			<div class="atg-card-head"><h2><?php esc_html_e( 'Recommended next steps', 'ai-traffic-guardian' ); ?></h2></div>
+			<div class="atg-card-head"><h2><?php esc_html_e( 'Your go-live checklist', 'ai-traffic-guardian' ); ?></h2></div>
 			<ul>
-				<li><span class="dashicons dashicons-yes-alt"></span> <?php esc_html_e( 'Let shadow mode run a few days, then review the Traffic Log for false positives.', 'ai-traffic-guardian' ); ?></li>
-				<li><span class="dashicons dashicons-yes-alt"></span> <?php printf( /* translators: %s link */ esc_html__( 'Tune per-vendor rules in the %s.', 'ai-traffic-guardian' ), '<a href="' . esc_url( admin_url( 'admin.php?page=atg-policy' ) ) . '">' . esc_html__( 'AI Policy Matrix', 'ai-traffic-guardian' ) . '</a>' ); // phpcs:ignore WordPress.Security.EscapeOutput ?></li>
-				<li><span class="dashicons dashicons-yes-alt"></span> <?php printf( /* translators: %s link */ esc_html__( 'Add office IPs and webhook endpoints to the %s.', 'ai-traffic-guardian' ), '<a href="' . esc_url( admin_url( 'admin.php?page=atg-allowlist' ) ) . '">' . esc_html__( 'Allowlist', 'ai-traffic-guardian' ) . '</a>' ); // phpcs:ignore WordPress.Security.EscapeOutput ?></li>
-				<li><span class="dashicons dashicons-yes-alt"></span> <?php esc_html_e( 'For raw-volume CPU savings, pair this plugin with an edge layer (Cloudflare or host-level caching).', 'ai-traffic-guardian' ); ?></li>
+				<li><span class="dashicons dashicons-yes-alt"></span> <?php esc_html_e( 'Let shadow mode run 3–7 days so real bot patterns emerge in your Traffic Log.', 'ai-traffic-guardian' ); ?></li>
+				<li><span class="dashicons dashicons-yes-alt"></span> <?php printf( esc_html__( 'In the %s, filter by Classification = Humans and confirm no real visitors are being flagged.', 'ai-traffic-guardian' ), '<a href="' . esc_url( admin_url( 'admin.php?page=atg-log' ) ) . '">' . esc_html__( 'Traffic Log', 'ai-traffic-guardian' ) . '</a>' ); // phpcs:ignore ?></li>
+				<li><span class="dashicons dashicons-yes-alt"></span> <?php printf( esc_html__( 'Tune per-vendor rules in the %s — for example allow OpenAI Search but throttle OpenAI Training.', 'ai-traffic-guardian' ), '<a href="' . esc_url( admin_url( 'admin.php?page=atg-policy' ) ) . '">' . esc_html__( 'AI Policy Matrix', 'ai-traffic-guardian' ) . '</a>' ); // phpcs:ignore ?></li>
+				<li><span class="dashicons dashicons-yes-alt"></span> <?php printf( esc_html__( 'Add your office IP and monitoring service to the %s so they are never blocked.', 'ai-traffic-guardian' ), '<a href="' . esc_url( admin_url( 'admin.php?page=atg-allowlist' ) ) . '">' . esc_html__( 'Allowlist', 'ai-traffic-guardian' ) . '</a>' ); // phpcs:ignore ?></li>
+				<li><span class="dashicons dashicons-yes-alt"></span> <?php printf( esc_html__( 'Run the %s to check for any gaps in your setup before going live.', 'ai-traffic-guardian' ), '<a href="' . esc_url( admin_url( 'admin.php?page=atg-audit' ) ) . '">' . esc_html__( 'Bot Security Audit', 'ai-traffic-guardian' ) . '</a>' ); // phpcs:ignore ?></li>
 			</ul>
 		</div>
 	</div>
