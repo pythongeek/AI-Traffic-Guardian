@@ -299,13 +299,26 @@ assert_test( 'Allowlist: URI Match', $allowlist->path_match( '/public-api/v1/get
 
 // Test Suite 3: Rate Limiter
 $limiter = new ATG_Rate_Limiter();
-$ip = '10.0.0.50';
-for ( $i = 0; $i < 65; $i++ ) {
-	$limiter->hit( $ip );
-}
-assert_test( 'Rate Limiter: Threshold exceeded causes limit check', $limiter->is_limited( $ip, 60 ) );
-$limiter->reset( $ip );
-assert_test( 'Rate Limiter: Reset clears threshold limit', ! $limiter->is_limited( $ip, 60 ) );
+$decision = array(
+	'ip'      => '10.0.0.50',
+	'session' => 'sess_123',
+	'action'  => 'allow',
+	'reason'  => '',
+	'risk'    => 0,
+);
+global $options, $transients;
+$options['atg_settings']['rate_enabled']   = true;
+$options['atg_settings']['rate_human_rpm'] = 2;
+$options['atg_settings']['rate_burst']     = 1;
+$transients = array();
+
+$res1 = $limiter->check( $decision, 'human' );
+$res2 = $limiter->check( $decision, 'human' );
+$res3 = $limiter->check( $decision, 'human' );
+
+assert_test( 'Rate Limiter: First hits within limit are allowed', 'allow' === $res1['action'] && 'allow' === $res2['action'] );
+assert_test( 'Rate Limiter: Exceeding limit triggers throttle', 'throttle' === $res3['action'] );
+
 
 // Test Suite 4: Form Guard
 $guard = new ATG_Form_Guard();
