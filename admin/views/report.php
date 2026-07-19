@@ -86,6 +86,33 @@ $stats = ATG_Report_Generator::get_stats();
 		</table>
 	</div>
 
+	<!-- Shadow Mode Challenge Opt-In (Phase 11) -->
+	<div class="atg-card atg-print-hide" id="atg-challenge-card" style="display:none; margin-top:20px; border-left: 6px solid #6366f1;">
+		<div class="atg-card-head">
+			<h2><?php esc_html_e( 'Enter the Shadow Mode Challenge', 'ai-traffic-guardian' ); ?></h2>
+			<p class="description"><?php esc_html_e( 'Submit your 7-day shadow mode bot statistics. Sites with the highest AI crawler traffic win!', 'ai-traffic-guardian' ); ?></p>
+		</div>
+		<div style="margin-top:15px; padding:15px; background:#f5f3ff; border:1px solid #ddd6fe; border-radius:6px;">
+			<p style="margin:0 0 10px 0; font-weight:600; color:#4c1d95;">
+				<span id="atg-challenge-prize"></span>
+			</p>
+			<form id="atg-challenge-form" onsubmit="submitChallengeEntry(event)">
+				<input type="hidden" id="atg-challenge-id" value="" />
+				<div style="margin-bottom:12px;">
+					<label style="display:block; font-weight:600; font-size:13px; color:#475569; margin-bottom:5px;"><?php esc_html_e( 'Leaderboard Handle / Display Name:', 'ai-traffic-guardian' ); ?></label>
+					<input type="text" id="atg-challenge-display-name" placeholder="anonymous" style="width:100%; max-width:300px; padding:6px; border:1px solid #cbd5e1; border-radius:4px;" />
+				</div>
+				<div style="margin-bottom:15px;">
+					<label style="font-weight:500; color:#475569; font-size:13px;">
+						<input type="checkbox" id="atg-challenge-show-domain" /> <?php esc_html_e( 'Disclose my full domain name on the public leaderboard (instead of masked e***e.com)', 'ai-traffic-guardian' ); ?>
+					</label>
+				</div>
+				<button type="submit" class="button button-primary" id="atg-challenge-submit-btn"><?php esc_html_e( 'Submit Entry', 'ai-traffic-guardian' ); ?></button>
+			</form>
+			<div id="atg-challenge-result" style="display:none; margin-top:10px; font-weight:600; color:#059669;"></div>
+		</div>
+	</div>
+
 	<!-- Hidden Canvas for Social Card Generation -->
 	<canvas id="atgSocialCanvas" width="600" height="315" style="display:none;"></canvas>
 </div>
@@ -132,5 +159,79 @@ function exportSocialCard() {
 	link.download = 'bot-audit-report.png';
 	link.href = canvas.toDataURL('image/png');
 	link.click();
+}
+
+// On page load check if active challenge campaign exists
+document.addEventListener('DOMContentLoaded', function() {
+	var restUrl = '<?php echo esc_url( rest_url( "atg/v1/challenge/campaign" ) ); ?>';
+	fetch(restUrl, {
+		headers: {
+			'X-WP-Nonce': '<?php echo esc_js( wp_create_nonce( "wp_rest" ) ); ?>'
+		}
+	})
+	.then(function(res) { return res.json(); })
+	.then(function(data) {
+		if (data && data.campaign_id) {
+			document.getElementById('atg-challenge-id').value = data.campaign_id;
+			var prizeText = '<?php esc_html_e( "Active Challenge Campaign:", "ai-traffic-guardian" ); ?> ' + data.campaign_id;
+			if (data.prize) {
+				prizeText += ' — <?php esc_html_e( "Prize:", "ai-traffic-guardian" ); ?> ' + data.prize;
+			}
+			document.getElementById('atg-challenge-prize').innerText = prizeText;
+			document.getElementById('atg-challenge-card').style.display = 'block';
+		}
+	})
+	.catch(function(err) {
+		console.error('Failed to load active campaign details', err);
+	});
+});
+
+function submitChallengeEntry(event) {
+	event.preventDefault();
+	var campaignId = document.getElementById('atg-challenge-id').value;
+	var displayName = document.getElementById('atg-challenge-display-name').value;
+	var showDomain = document.getElementById('atg-challenge-show-domain').checked;
+	var submitBtn = document.getElementById('atg-challenge-submit-btn');
+	var resultDiv = document.getElementById('atg-challenge-result');
+
+	submitBtn.disabled = true;
+	submitBtn.innerText = '<?php esc_html_e( "Submitting...", "ai-traffic-guardian" ); ?>';
+
+	var restUrl = '<?php echo esc_url( rest_url( "atg/v1/challenge/submit" ) ); ?>';
+	fetch(restUrl, {
+		method: 'POST',
+		headers: {
+			'Content-Type': 'application/json',
+			'X-WP-Nonce': '<?php echo esc_js( wp_create_nonce( "wp_rest" ) ); ?>'
+		},
+		body: JSON.stringify({
+			campaign_id: campaignId,
+			display_name: displayName,
+			show_domain: showDomain
+		})
+	})
+	.then(function(res) { return res.json(); })
+	.then(function(data) {
+		submitBtn.innerText = '<?php esc_html_e( "Submitted", "ai-traffic-guardian" ); ?>';
+		resultDiv.style.display = 'block';
+		if (data.accepted) {
+			resultDiv.style.color = '#059669';
+			resultDiv.innerHTML = '<?php esc_html_e( "Success! You are ranked #", "ai-traffic-guardian" ); ?>' + data.current_rank + ' <?php esc_html_e( "of", "ai-traffic-guardian" ); ?> ' + data.total_entries + ' <?php esc_html_e( "entries.", "ai-traffic-guardian" ); ?> <a href="https://campaign.aitrafficguardian.com/leaderboard?campaign_id=' + encodeURIComponent(campaignId) + '" target="_blank" style="text-decoration: underline; font-weight: bold; color: #4338ca; margin-left: 5px;"><?php esc_html_e( "View Standings", "ai-traffic-guardian" ); ?></a>';
+		} else {
+			resultDiv.style.color = '#dc2626';
+			var errorMsg = data.message || '<?php esc_html_e( "Failed to submit challenge entry.", "ai-traffic-guardian" ); ?>';
+			resultDiv.innerText = errorMsg;
+			submitBtn.disabled = false;
+			submitBtn.innerText = '<?php esc_html_e( "Submit Entry", "ai-traffic-guardian" ); ?>';
+		}
+	})
+	.catch(function(err) {
+		console.error('Failed to submit entry', err);
+		resultDiv.style.display = 'block';
+		resultDiv.style.color = '#dc2626';
+		resultDiv.innerText = '<?php esc_html_e( "Failed to submit challenge entry.", "ai-traffic-guardian" ); ?>';
+		submitBtn.disabled = false;
+		submitBtn.innerText = '<?php esc_html_e( "Submit Entry", "ai-traffic-guardian" ); ?>';
+	});
 }
 </script>
