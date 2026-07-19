@@ -30,6 +30,8 @@ class ATG_Admin {
 			'atg-seo'            => array( __( 'SEO & AI Discovery', 'ai-traffic-guardian' ), 'seo-tools.php', 'manage_options' ),
 			'atg-alerts'         => array( __( 'Alerts', 'ai-traffic-guardian' ), 'alerts.php', 'atg_view_reports' ),
 			'atg-settings'       => array( __( 'Settings', 'ai-traffic-guardian' ), 'settings.php', 'manage_options' ),
+			'atg-edge'           => array( __( 'Edge Setup', 'ai-traffic-guardian' ), 'edge-setup.php', 'manage_options' ),
+			'atg-report'         => array( __( 'Bot Audit Report', 'ai-traffic-guardian' ), 'report.php', 'manage_options' ),
 		);
 	}
 

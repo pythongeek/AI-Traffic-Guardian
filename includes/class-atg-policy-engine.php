@@ -126,6 +126,10 @@ class ATG_Policy_Engine {
 		$private = $apply( $private, 'seo_tool', 'block' );
 		$private = $apply( $private, 'agent_proxy', 'throttle' );
 
+		// Headless CMS: whitelist REST, rate limit, bypass auth.
+		$headless = $apply( $base, 'ai_search', 'allow' );
+		$headless = $apply( $headless, 'ai_training', 'throttle' );
+
 		return array(
 			'publisher'   => array(
 				'label'       => __( 'Content publisher — maximize AI citation', 'ai-traffic-guardian' ),
@@ -141,6 +145,11 @@ class ATG_Policy_Engine {
 				'label'       => __( 'Private / membership site — block all scraping', 'ai-traffic-guardian' ),
 				'description' => __( 'Block AI crawlers and SEO tools entirely, throttle agentic fetchers. Search engines and business-critical traffic stay allowed.', 'ai-traffic-guardian' ),
 				'matrix'      => $private,
+			),
+			'headless'    => array(
+				'label'       => __( 'Headless site — my frontend isn\'t WordPress', 'ai-traffic-guardian' ),
+				'description' => __( 'Allows heavy REST API requests with lenient rate-limiting, whitelists REST namespace routes, and exempts authenticated clients.', 'ai-traffic-guardian' ),
+				'matrix'      => $headless,
 			),
 		);
 	}

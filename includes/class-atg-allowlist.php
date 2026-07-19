@@ -47,6 +47,10 @@ class ATG_Allowlist {
 			'/wp-cron.php',      // WP-Cron.
 			'/xmlrpc.php',       // Handled separately, but never bot-blocked here.
 		);
+		$preset = get_option( 'atg_preset', '' );
+		if ( 'headless' === $preset ) {
+			$paths[] = '/wp-json/wp/v2/';
+		}
 		return apply_filters( 'atg_protected_paths', $paths );
 	}
 

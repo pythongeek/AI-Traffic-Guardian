@@ -1,6 +1,6 @@
 <?php
 /**
- * Dashboard view.
+ * Dashboard view with Simple vs Advanced modes and licensing settings.
  *
  * @package AI_Traffic_Guardian
  */
@@ -8,13 +8,61 @@
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
+
+$preset = get_option( 'atg_preset', 'publisher' );
+$enforcement = ATG_Plugin::instance()->enforcement_mode();
+$is_pro = ATG_Licensing::is_pro();
+$license_key = get_option( 'atg_license_key', '' );
+
+if ( isset( $_POST['atg_license_nonce'] ) && wp_verify_nonce( sanitize_key( $_POST['atg_license_nonce'] ), 'atg_license_save' ) ) {
+	$key = isset( $_POST['license_key'] ) ? sanitize_text_field( $_POST['license_key'] ) : '';
+	ATG_Licensing::update_license( $key );
+	wp_safe_redirect( admin_url( 'admin.php?page=atg-dashboard' ) );
+	exit;
+}
 ?>
 <div class="atg-page" id="atg-dashboard">
 
-	<nav class="nav-tab-wrapper atg-tabs" style="margin-bottom: 20px; border-bottom: 1px solid #e2e8f0; display: flex; gap: 15px;">
-		<a href="#overview" class="nav-tab nav-tab-active" data-tab="overview" style="font-weight: 600; font-size: 14px; text-decoration: none; padding: 5px 10px; border-bottom: 2px solid transparent; color: #64748b; cursor: pointer; transition: all 0.2s;" onmouseover="this.style.color='#0f172a'" onmouseout="if(!this.classList.contains('nav-tab-active'))this.style.color='#64748b'"><?php esc_html_e( 'Overview', 'ai-traffic-guardian' ); ?></a>
-		<a href="#cost" class="nav-tab" data-tab="cost" style="font-weight: 600; font-size: 14px; text-decoration: none; padding: 5px 10px; border-bottom: 2px solid transparent; color: #64748b; cursor: pointer; transition: all 0.2s;" onmouseover="this.style.color='#0f172a'" onmouseout="if(!this.classList.contains('nav-tab-active'))this.style.color='#64748b'"><?php esc_html_e( 'Cost & Bandwidth', 'ai-traffic-guardian' ); ?></a>
-	</nav>
+	<!-- Header and Mode Toggles -->
+	<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px; border-bottom:1px solid #e2e8f0; padding-bottom:10px;">
+		<nav class="nav-tab-wrapper atg-tabs" style="margin-bottom: 0; border: none; display: flex; gap: 15px;">
+			<a href="#overview" class="nav-tab nav-tab-active" data-tab="overview" style="font-weight: 600; font-size: 14px; text-decoration: none; padding: 5px 10px; border-bottom: 2px solid transparent; color: #64748b; cursor: pointer; transition: all 0.2s;" onmouseover="this.style.color='#0f172a'" onmouseout="if(!this.classList.contains('nav-tab-active'))this.style.color='#64748b'"><?php esc_html_e( 'Overview', 'ai-traffic-guardian' ); ?></a>
+			<a href="#cost" class="nav-tab" data-tab="cost" style="font-weight: 600; font-size: 14px; text-decoration: none; padding: 5px 10px; border-bottom: 2px solid transparent; color: #64748b; cursor: pointer; transition: all 0.2s;" onmouseover="this.style.color='#0f172a'" onmouseout="if(!this.classList.contains('nav-tab-active'))this.style.color='#64748b'"><?php esc_html_e( 'Cost & Bandwidth', 'ai-traffic-guardian' ); ?></a>
+		</nav>
+
+		<div style="display:flex; align-items:center; gap:10px;">
+			<label style="font-weight:600; font-size:13px; color:#475569;">
+				<input type="checkbox" id="atg-view-mode-toggle" onchange="toggleViewMode(this.checked)" /> <?php esc_html_e( 'Advanced View', 'ai-traffic-guardian' ); ?>
+			</label>
+		</div>
+	</div>
+
+	<!-- Simple View Wrapper -->
+	<div id="atg-simple-view-wrapper">
+		<div class="atg-card" style="margin-bottom: 20px; border-left: 6px solid <?php echo 'shadow' === $enforcement ? '#f97316' : ( 'active' === $enforcement ? '#16a34a' : '#ef4444' ); ?>;">
+			<div style="display:flex; justify-content:space-between; align-items:center; padding:10px 0;">
+				<div>
+					<h3 style="margin:0; font-size:18px; font-weight:700; color:#1e293b;">
+						<?php
+						if ( 'shadow' === $enforcement ) {
+							esc_html_e( 'Status: Observing & Shadowing', 'ai-traffic-guardian' );
+						} elseif ( 'active' === $enforcement ) {
+							esc_html_e( 'Status: Fully Protected', 'ai-traffic-guardian' );
+						} else {
+							esc_html_e( 'Status: Protection Disabled', 'ai-traffic-guardian' );
+						}
+						?>
+					</h3>
+					<p class="description" style="margin:5px 0 0 0;">
+						<?php printf( esc_html__( 'Current Active Preset: %s', 'ai-traffic-guardian' ), '<strong>' . esc_html( ucfirst( $preset ) ) . '</strong>' ); ?>
+					</p>
+				</div>
+				<div>
+					<a href="<?php echo esc_url( admin_url( 'admin.php?page=atg-policy' ) ); ?>" class="button button-primary"><?php esc_html_e( 'Adjust Preset', 'ai-traffic-guardian' ); ?></a>
+				</div>
+			</div>
+		</div>
+	</div>
 
 	<div id="atg-dashboard-overview-tab">
 		<div class="atg-shadow-banner" data-atg-shadow-banner hidden>
@@ -40,24 +88,20 @@ if ( ! defined( 'ABSPATH' ) ) {
 			<button class="button" data-atg-refresh><span class="dashicons dashicons-update"></span> <?php esc_html_e( 'Refresh', 'ai-traffic-guardian' ); ?></button>
 		</div>
 
-		<div class="atg-card" id="atg-comparison-widget" style="display:none; margin-bottom: 20px;">
+		<!-- Licensing Widget (Always available to enter Pro) -->
+		<div class="atg-card" style="margin-bottom: 20px; border-left: 6px solid <?php echo $is_pro ? '#10b981' : '#cbd5e1'; ?>;">
 			<div class="atg-card-head">
-				<h2><?php esc_html_e( 'Enforcement Impact (Shadow vs Active)', 'ai-traffic-guardian' ); ?></h2>
-				<p class="description"><?php esc_html_e( 'Comparison of bot traffic profile recorded during the shadow period vs active enforcement.', 'ai-traffic-guardian' ); ?></p>
+				<h2><?php esc_html_e( 'Bot Shield Pro License', 'ai-traffic-guardian' ); ?></h2>
+				<p class="description"><?php esc_html_e( 'Enter your premium license key starting with BSPRO- to unlock advanced vendors database, white-label settings, and edge integrations.', 'ai-traffic-guardian' ); ?></p>
 			</div>
-			<div style="display: flex; gap: 40px; justify-content: space-around; align-items: center; padding: 20px 0;">
-				<div style="text-align: center;">
-					<h3 style="margin: 0; color: #64748b; font-size: 14px; text-transform: uppercase;"><?php esc_html_e( 'Shadow Period', 'ai-traffic-guardian' ); ?></h3>
-					<div style="font-size: 36px; font-weight: 700; color: #f97316; margin: 10px 0;" id="atg-compare-shadow-share">—</div>
-					<p class="description" id="atg-compare-shadow-desc">—</p>
-				</div>
-				<div style="font-size: 32px; color: #cbd5e1;">➔</div>
-				<div style="text-align: center;">
-					<h3 style="margin: 0; color: #64748b; font-size: 14px; text-transform: uppercase;"><?php esc_html_e( 'Active Enforcement', 'ai-traffic-guardian' ); ?></h3>
-					<div style="font-size: 36px; font-weight: 700; color: #10b981; margin: 10px 0;" id="atg-compare-active-share">—</div>
-					<p class="description" id="atg-compare-active-desc">—</p>
-				</div>
-			</div>
+			<form method="POST" style="margin-top:15px; display:flex; gap:10px; align-items:center;">
+				<?php wp_nonce_field( 'atg_license_save', 'atg_license_nonce' ); ?>
+				<input type="password" name="license_key" value="<?php echo esc_attr( $license_key ); ?>" placeholder="e.g. BSPRO-XXXX-XXXX" style="width:300px; padding:6px; border-radius:4px; border:1px solid #cbd5e1;" />
+				<button type="submit" class="button button-secondary"><?php esc_html_e( 'Save License Key', 'ai-traffic-guardian' ); ?></button>
+				<span style="font-weight:600; color:<?php echo $is_pro ? '#10b981' : '#64748b'; ?>;">
+					<?php echo $is_pro ? esc_html__( 'Pro Activated', 'ai-traffic-guardian' ) : esc_html__( 'Free Tier Active', 'ai-traffic-guardian' ); ?>
+				</span>
+			</form>
 		</div>
 
 		<div class="atg-kpis" data-atg-kpis>
@@ -87,73 +131,77 @@ if ( ! defined( 'ABSPATH' ) ) {
 			</div>
 		</div>
 
-		<div class="atg-grid-2">
-			<div class="atg-card">
-				<div class="atg-card-head">
-					<h2><?php esc_html_e( 'Traffic over time', 'ai-traffic-guardian' ); ?></h2>
+		<!-- Advanced View Only Section -->
+		<div id="atg-advanced-view-section" style="display:none;">
+			<div class="atg-grid-2">
+				<div class="atg-card">
+					<div class="atg-card-head">
+						<h2><?php esc_html_e( 'Traffic over time', 'ai-traffic-guardian' ); ?></h2>
+					</div>
+					<div class="atg-chart-wrap"><canvas id="atg-chart-series"></canvas></div>
 				</div>
-				<div class="atg-chart-wrap"><canvas id="atg-chart-series"></canvas></div>
-			</div>
-			<div class="atg-card">
-				<div class="atg-card-head">
-					<h2><?php esc_html_e( 'Bot traffic by category', 'ai-traffic-guardian' ); ?></h2>
+				<div class="atg-card">
+					<div class="atg-card-head">
+						<h2><?php esc_html_e( 'Bot traffic by category', 'ai-traffic-guardian' ); ?></h2>
+					</div>
+					<div class="atg-chart-wrap"><canvas id="atg-chart-purpose"></canvas></div>
 				</div>
-				<div class="atg-chart-wrap"><canvas id="atg-chart-purpose"></canvas></div>
 			</div>
-		</div>
 
-		<div class="atg-grid-2">
-			<div class="atg-card">
-				<div class="atg-card-head">
-					<h2><?php esc_html_e( 'Top AI vendors in your traffic', 'ai-traffic-guardian' ); ?></h2>
+			<div class="atg-grid-2">
+				<div class="atg-card">
+					<div class="atg-card-head">
+						<h2><?php esc_html_e( 'Top AI vendors in your traffic', 'ai-traffic-guardian' ); ?></h2>
+					</div>
+					<table class="atg-table" data-atg-vendors>
+						<thead>
+							<tr>
+								<th><?php esc_html_e( 'Vendor', 'ai-traffic-guardian' ); ?></th>
+								<th><?php esc_html_e( 'Requests', 'ai-traffic-guardian' ); ?></th>
+								<th><?php esc_html_e( 'Share', 'ai-traffic-guardian' ); ?></th>
+							</tr>
+						</thead>
+						<tbody><tr><td colspan="3" class="atg-empty"><?php esc_html_e( 'Loading…', 'ai-traffic-guardian' ); ?></td></tr></tbody>
+					</table>
 				</div>
-				<table class="atg-table" data-atg-vendors>
+
+				<div class="atg-card">
+					<div class="atg-card-head">
+						<h2><?php esc_html_e( 'Bot traffic Origins (Country)', 'ai-traffic-guardian' ); ?></h2>
+					</div>
+					<table class="atg-table" data-atg-countries>
+						<thead>
+							<tr>
+								<th><?php esc_html_e( 'Country', 'ai-traffic-guardian' ); ?></th>
+								<th><?php esc_html_e( 'Requests', 'ai-traffic-guardian' ); ?></th>
+								<th><?php esc_html_e( 'Share', 'ai-traffic-guardian' ); ?></th>
+							</tr>
+						</thead>
+						<tbody><tr><td colspan="3" class="atg-empty"><?php esc_html_e( 'Loading…', 'ai-traffic-guardian' ); ?></td></tr></tbody>
+					</table>
+				</div>
+			</div>
+
+			<div class="atg-card" style="margin-top:20px; margin-bottom:20px;">
+				<div class="atg-card-head">
+					<h2><?php esc_html_e( 'Latest decisions', 'ai-traffic-guardian' ); ?></h2>
+					<a href="<?php echo esc_url( admin_url( 'admin.php?page=atg-log' ) ); ?>" class="atg-link"><?php esc_html_e( 'View full log', 'ai-traffic-guardian' ); ?></a>
+				</div>
+				<table class="atg-table" data-atg-recent>
 					<thead>
 						<tr>
-							<th><?php esc_html_e( 'Vendor', 'ai-traffic-guardian' ); ?></th>
-							<th><?php esc_html_e( 'Requests', 'ai-traffic-guardian' ); ?></th>
-							<th><?php esc_html_e( 'Share', 'ai-traffic-guardian' ); ?></th>
+							<th><?php esc_html_e( 'Time', 'ai-traffic-guardian' ); ?></th>
+							<th><?php esc_html_e( 'Bot', 'ai-traffic-guardian' ); ?></th>
+							<th><?php esc_html_e( 'Verified', 'ai-traffic-guardian' ); ?></th>
+							<th><?php esc_html_e( 'Decision', 'ai-traffic-guardian' ); ?></th>
 						</tr>
 					</thead>
-					<tbody><tr><td colspan="3" class="atg-empty"><?php esc_html_e( 'Loading…', 'ai-traffic-guardian' ); ?></td></tr></tbody>
-				</table>
-			</div>
-			<div class="atg-card">
-				<div class="atg-card-head">
-					<h2><?php esc_html_e( 'Bot Traffic Origins (Country)', 'ai-traffic-guardian' ); ?></h2>
-				</div>
-				<table class="atg-table" data-atg-countries>
-					<thead>
-						<tr>
-							<th><?php esc_html_e( 'Country', 'ai-traffic-guardian' ); ?></th>
-							<th><?php esc_html_e( 'Requests', 'ai-traffic-guardian' ); ?></th>
-							<th><?php esc_html_e( 'Share', 'ai-traffic-guardian' ); ?></th>
-						</tr>
-					</thead>
-					<tbody><tr><td colspan="3" class="atg-empty"><?php esc_html_e( 'Loading…', 'ai-traffic-guardian' ); ?></td></tr></tbody>
+					<tbody><tr><td colspan="4" class="atg-empty"><?php esc_html_e( 'Loading…', 'ai-traffic-guardian' ); ?></td></tr></tbody>
 				</table>
 			</div>
 		</div>
 
-		<div class="atg-card" style="margin-top:20px; margin-bottom:20px;">
-			<div class="atg-card-head">
-				<h2><?php esc_html_e( 'Latest decisions', 'ai-traffic-guardian' ); ?></h2>
-				<a href="<?php echo esc_url( admin_url( 'admin.php?page=atg-log' ) ); ?>" class="atg-link"><?php esc_html_e( 'View full log', 'ai-traffic-guardian' ); ?></a>
-			</div>
-			<table class="atg-table" data-atg-recent>
-				<thead>
-					<tr>
-						<th><?php esc_html_e( 'Time', 'ai-traffic-guardian' ); ?></th>
-						<th><?php esc_html_e( 'Bot', 'ai-traffic-guardian' ); ?></th>
-						<th><?php esc_html_e( 'Verified', 'ai-traffic-guardian' ); ?></th>
-						<th><?php esc_html_e( 'Decision', 'ai-traffic-guardian' ); ?></th>
-					</tr>
-				</thead>
-				<tbody><tr><td colspan="4" class="atg-empty"><?php esc_html_e( 'Loading…', 'ai-traffic-guardian' ); ?></td></tr></tbody>
-			</table>
-		</div>
-
-		<div class="atg-card atg-next-steps">
+		<div class="atg-card atg-next-steps" style="margin-top:20px;">
 			<div class="atg-card-head"><h2><?php esc_html_e( 'Recommended next steps', 'ai-traffic-guardian' ); ?></h2></div>
 			<ul>
 				<li><span class="dashicons dashicons-yes-alt"></span> <?php esc_html_e( 'Let shadow mode run a few days, then review the Traffic Log for false positives.', 'ai-traffic-guardian' ); ?></li>
@@ -218,3 +266,30 @@ if ( ! defined( 'ABSPATH' ) ) {
 		</div>
 	</div>
 </div>
+
+<script>
+function toggleViewMode(isAdvanced) {
+	var advSection = document.getElementById('atg-advanced-view-section');
+	var simpleSection = document.getElementById('atg-simple-view-wrapper');
+
+	if (isAdvanced) {
+		if(advSection) advSection.style.display = 'block';
+		if(simpleSection) simpleSection.style.display = 'none';
+		localStorage.setItem('atg_view_mode', 'advanced');
+	} else {
+		if(advSection) advSection.style.display = 'none';
+		if(simpleSection) simpleSection.style.display = 'block';
+		localStorage.setItem('atg_view_mode', 'simple');
+	}
+}
+
+// Restore user view preference.
+document.addEventListener('DOMContentLoaded', function() {
+	var preferredMode = localStorage.getItem('atg_view_mode') || 'simple';
+	var checkbox = document.getElementById('atg-view-mode-toggle');
+	if (checkbox) {
+		checkbox.checked = (preferredMode === 'advanced');
+		toggleViewMode(checkbox.checked);
+	}
+});
+</script>

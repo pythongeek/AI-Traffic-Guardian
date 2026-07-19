@@ -49,6 +49,8 @@ final class ATG_Plugin {
 	public $custom_signatures;
 	public $anomaly_detector;
 	public $cloudflare;
+	public $edge;
+	public $wizard;
 
 	/**
 	 * Get singleton.
@@ -167,6 +169,8 @@ final class ATG_Plugin {
 		$this->custom_signatures = new ATG_Custom_Signatures();
 		$this->anomaly_detector  = new ATG_Anomaly_Detector();
 		$this->cloudflare        = new ATG_Cloudflare();
+		$this->edge              = new ATG_Edge();
+		$this->wizard            = new ATG_Wizard();
 
 		// Schema self-healing: run on every boot so REST requests and front-end
 		// pages always have tables available, even if activation failed earlier.
@@ -186,6 +190,8 @@ final class ATG_Plugin {
 		$this->custom_signatures->hooks();
 		$this->anomaly_detector->hooks();
 		$this->cloudflare->hooks();
+		$this->edge->hooks();
+		$this->wizard->hooks();
 		$this->alerts->hooks();
 
 		// GDPR hooks.

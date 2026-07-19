@@ -190,6 +190,19 @@ class ATG_REST {
 			'permission_callback' => '__return_true',
 			'callback'            => array( __CLASS__, 'beacon' ),
 		) );
+
+		// Edge integration contract endpoints (Phase 0)
+		register_rest_route( self::NS, '/verify', array(
+			'methods'             => 'POST',
+			'permission_callback' => '__return_true',
+			'callback'            => array( __CLASS__, 'verify_edge' ),
+		) );
+
+		register_rest_route( self::NS, '/snapshot', array(
+			'methods'             => 'GET',
+			'permission_callback' => '__return_true',
+			'callback'            => array( __CLASS__, 'get_snapshot' ),
+		) );
 	}
 
 	/**
@@ -775,5 +788,91 @@ class ATG_REST {
 			'ok'       => true,
 			'decision' => $decision,
 		), 200 );
+	}
+
+	/**
+	 * Verify edge request signature.
+	 *
+	 * @param WP_REST_Request $req  REST request object.
+	 * @param string          $path Endpoint path.
+	 * @param string          $method HTTP method.
+	 * @return true|WP_REST_Response Returns true on success or WP_REST_Response on authentication failure.
+	 */
+	private static function check_edge_auth( WP_REST_Request $req, $path, $method ) {
+		$site_id   = $req->get_header( 'X-ATG-Site-Id' );
+		$timestamp = $req->get_header( 'X-ATG-Timestamp' );
+		$signature = $req->get_header( 'X-ATG-Signature' );
+
+		if ( ! $site_id || ! $timestamp || ! $signature ) {
+			return new WP_REST_Response( array(
+				'error' => array(
+					'code'    => 'invalid_signature',
+					'message' => 'Signature verification failed.',
+				),
+			), 401 );
+		}
+
+		if ( $site_id !== ATG_Edge::get_site_id() ) {
+			return new WP_REST_Response( array(
+				'error' => array(
+					'code'    => 'unknown_site',
+					'message' => 'Unknown site ID.',
+				),
+			), 404 );
+		}
+
+		$body = $req->get_body();
+		if ( ! ATG_Edge::verify_signature( $path, $method, $timestamp, $signature, $body ) ) {
+			return new WP_REST_Response( array(
+				'error' => array(
+					'code'    => 'invalid_signature',
+					'message' => 'Signature verification failed.',
+				),
+			), 401 );
+		}
+
+		return true;
+	}
+
+	/**
+	 * Verify edge requests callback.
+	 *
+	 * @param WP_REST_Request $req REST Request.
+	 * @return WP_REST_Response|WP_Error
+	 */
+	public static function verify_edge( WP_REST_Request $req ) {
+		$auth = self::check_edge_auth( $req, '/wp-json/atg/v1/verify', 'POST' );
+		if ( $auth !== true ) {
+			return $auth;
+		}
+
+		$params = json_decode( $req->get_body(), true );
+		$ip     = isset( $params['ip'] ) ? sanitize_text_field( $params['ip'] ) : '';
+		$ua     = isset( $params['user_agent'] ) ? sanitize_text_field( $params['user_agent'] ) : '';
+		$path   = isset( $params['path'] ) ? sanitize_text_field( $params['path'] ) : '';
+
+		$decision = ATG_Plugin::instance()->classifier->classify( $ua, $ip, $path, true );
+
+		return new WP_REST_Response( array(
+			'decision'    => $decision['action'],
+			'reason'      => $decision['reason'],
+			'ttl_seconds' => 300,
+		), 200 );
+	}
+
+	/**
+	 * Get policy snapshot callback.
+	 *
+	 * @param WP_REST_Request $req REST Request.
+	 * @return WP_REST_Response|WP_Error
+	 */
+	public static function get_snapshot( WP_REST_Request $req ) {
+		$auth = self::check_edge_auth( $req, '/wp-json/atg/v1/snapshot', 'GET' );
+		if ( $auth !== true ) {
+			return $auth;
+		}
+
+		$snapshot = ATG_Edge::generate_snapshot();
+		return new WP_REST_Response( $snapshot, 200 );
 	}
 }

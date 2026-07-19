@@ -140,11 +140,26 @@ class ATG_Classifier {
 		}
 
 		// 2. Authenticated users are always human (P0).
-		if ( is_user_logged_in() && $plugin->get( 'auth_bypass', true ) ) {
+		$is_auth = is_user_logged_in();
+		if ( ! $is_auth && $plugin->get( 'auth_bypass', true ) ) {
+			$auth_header = '';
+			if ( ! empty( $_SERVER['HTTP_AUTHORIZATION'] ) ) {
+				$auth_header = sanitize_text_field( wp_unslash( $_SERVER['HTTP_AUTHORIZATION'] ) );
+			} elseif ( ! empty( $_SERVER['REDIRECT_HTTP_AUTHORIZATION'] ) ) {
+				$auth_header = sanitize_text_field( wp_unslash( $_SERVER['REDIRECT_HTTP_AUTHORIZATION'] ) );
+			}
+			if ( $auth_header ) {
+				if ( 0 === stripos( $auth_header, 'Bearer ' ) || 0 === stripos( $auth_header, 'Basic ' ) ) {
+					$is_auth = true;
+				}
+			}
+		}
+
+		if ( $is_auth && $plugin->get( 'auth_bypass', true ) ) {
 			return array_merge( $base, array(
 				'classification' => 'authenticated',
 				'action'         => 'allow',
-				'reason'         => 'Authenticated user bypass',
+				'reason'         => 'Authenticated user bypass (Session or API Token)',
 			) );
 		}
 

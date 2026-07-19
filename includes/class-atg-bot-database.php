@@ -605,7 +605,16 @@ class ATG_Bot_Database {
 			),
 		);
 
-		return apply_filters( 'atg_bot_signatures', $sigs );
+		$sigs = apply_filters( 'atg_bot_signatures', $sigs );
+
+		if ( ! ATG_Licensing::is_pro() ) {
+			$allowed_vendors = array( 'Google', 'OpenAI', 'Anthropic', 'Perplexity' );
+			$sigs = array_filter( $sigs, function( $sig ) use ( $allowed_vendors ) {
+				return in_array( $sig['vendor'], $allowed_vendors, true );
+			} );
+		}
+
+		return $sigs;
 	}
 
 	/**
