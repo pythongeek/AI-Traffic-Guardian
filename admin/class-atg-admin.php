@@ -57,7 +57,7 @@ class ATG_Admin {
 
 		$is_pro     = ATG_Licensing::atg_is_pro();
 		$page_title = ( $is_pro && defined( 'ATG_BRAND_NAME' ) ) ? ATG_BRAND_NAME : __( 'Bot Shield Pro', 'ai-traffic-guardian' );
-		$menu_title = ( $is_pro && defined( 'ATG_BRAND_NAME' ) ) ? ATG_BRAND_NAME : __( 'Traffic Guardian', 'ai-traffic-guardian' );
+		$menu_title = ( $is_pro && defined( 'ATG_BRAND_NAME' ) ) ? ATG_BRAND_NAME : __( 'Bot Shield Pro', 'ai-traffic-guardian' );
 		$icon       = ( $is_pro && defined( 'ATG_BRAND_ICON' ) ) ? ATG_BRAND_ICON : 'dashicons-shield-alt';
 
 		add_menu_page(
