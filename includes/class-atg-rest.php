@@ -35,20 +35,6 @@ class ATG_REST {
 			return false;
 		}
 
-		$user_id = get_current_user_id();
-		if ( $user_id ) {
-			$key   = 'atg_rl_rest_' . $user_id;
-			$count = (int) get_transient( $key );
-			if ( $count >= 10 ) {
-				return new WP_Error(
-					'rest_rate_limited',
-					__( 'Too many requests. Please wait a minute.', 'ai-traffic-guardian' ),
-					array( 'status' => 429 )
-				);
-			}
-			set_transient( $key, $count + 1, MINUTE_IN_SECONDS );
-		}
-
 		return true;
 	}
 
@@ -60,20 +46,6 @@ class ATG_REST {
 	public static function can_view_reports() {
 		if ( ! current_user_can( 'atg_view_reports' ) && ! current_user_can( 'manage_options' ) ) {
 			return false;
-		}
-
-		$user_id = get_current_user_id();
-		if ( $user_id ) {
-			$key   = 'atg_rl_rest_' . $user_id;
-			$count = (int) get_transient( $key );
-			if ( $count >= 10 ) {
-				return new WP_Error(
-					'rest_rate_limited',
-					__( 'Too many requests. Please wait a minute.', 'ai-traffic-guardian' ),
-					array( 'status' => 429 )
-				);
-			}
-			set_transient( $key, $count + 1, MINUTE_IN_SECONDS );
 		}
 
 		return true;
