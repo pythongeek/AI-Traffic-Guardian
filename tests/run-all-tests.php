@@ -179,6 +179,23 @@ if ( ! function_exists( 'add_filter' ) ) {
 if ( ! function_exists( '__' ) ) {
 	function __ ( $text, $domain = 'default' ) { return $text; }
 }
+if ( ! class_exists( 'WP_Error' ) ) {
+	class WP_Error {
+		public $errors = array();
+		public function add( $code, $message ) {
+			$this->errors[ $code ] = $message;
+		}
+		public function has_errors() {
+			return ! empty( $this->errors );
+		}
+	}
+}
+
+if ( ! function_exists( 'wp_salt' ) ) {
+	function wp_salt( $scheme = 'auth' ) {
+		return 'mocked_salt_key';
+	}
+}
 
 // Mock Database wrapper if WP DB not initialized
 if ( ! isset( $GLOBALS['wpdb'] ) ) {
@@ -213,13 +230,21 @@ if ( ! isset( $GLOBALS['wpdb'] ) ) {
 	$wpdb = $GLOBALS['wpdb'];
 }
 
+class MockLogger {
+	public function log( $data ) {
+		return true;
+	}
+}
+
 // Mock plugin container
 class MockPlugin {
 	public $allowlist;
+	public $logger;
 	public $settings = array();
 	public function __construct() {
 		global $options;
 		$this->allowlist = new ATG_Allowlist();
+		$this->logger    = new MockLogger();
 		$this->settings  = $options['atg_settings'];
 	}
 	public function get( $key, $default = false ) {
@@ -238,6 +263,9 @@ if ( ! class_exists( 'ATG_Plugin' ) ) {
 				self::$inst = new MockPlugin();
 			}
 			return self::$inst;
+		}
+		public static function client_ip() {
+			return '127.0.0.1';
 		}
 	}
 }
@@ -322,10 +350,21 @@ assert_test( 'Rate Limiter: Exceeding limit triggers throttle', 'throttle' === $
 
 // Test Suite 4: Form Guard
 $guard = new ATG_Form_Guard();
-$_POST = array( 'username' => 'testuser', 'password' => 'secret123' );
-assert_test( 'Form Guard: Clean submission allowed', ! $guard->is_spam_submission() );
-$_POST = array( 'username' => 'testuser', 'password' => 'secret123', 'atg_email_confirm' => 'spambot@spam.com' );
-assert_test( 'Form Guard: Filled honeypot classified as spam', $guard->is_spam_submission() );
+
+$session = isset( $_COOKIE['atg_sid'] ) ? sanitize_text_field( wp_unslash( $_COOKIE['atg_sid'] ) ) : 'none';
+$token = hash_hmac( 'sha256', 'form|' . $session, wp_salt( 'nonce' ) );
+
+$_POST['atg_hp'] = '';
+$_POST['atg_tok'] = $token;
+
+$errors = new WP_Error();
+$errors = $guard->check_registration( $errors );
+assert_test( 'Form Guard: Clean submission with valid token allowed', ! $errors->has_errors() );
+
+$_POST['atg_hp'] = 'spambot@spam.com';
+$errors_spam = new WP_Error();
+$errors_spam = $guard->check_registration( $errors_spam );
+assert_test( 'Form Guard: Filled honeypot classified as spam', $errors_spam->has_errors() );
 
 // Test Suite 5: Licensing
 $options['atg_license_status'] = '';
