@@ -118,6 +118,8 @@ class ATG_DB {
 	}
 
 	/**
+	 * Housekeeping: prune old logs.
+	 */
 	public static function prune( $days ) {
 		global $wpdb;
 		$days = max( 1, absint( $days ) );
