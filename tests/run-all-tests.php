@@ -292,9 +292,9 @@ assert_test( 'Custom Signature: matches and classifies Custom Spider', 'custom_0
 
 // Test Suite 2: Allowlist Engine
 $allowlist = new ATG_Allowlist();
-assert_test( 'Allowlist: IP Match', $allowlist->ip_match( '192.168.1.100' ) );
-assert_test( 'Allowlist: IP Mismatch', ! $allowlist->ip_match( '192.168.1.101' ) );
-assert_test( 'Allowlist: Agent Regex Match', $allowlist->agent_match( 'Hello TrustedPartnerBot World' ) );
+assert_test( 'Allowlist: IP Match', $allowlist->ip_allowed( '192.168.1.100' ) );
+assert_test( 'Allowlist: IP Mismatch', ! $allowlist->ip_allowed( '192.168.1.101' ) );
+assert_test( 'Allowlist: Agent Regex Match', false !== $allowlist->ua_allowed( 'Hello TrustedPartnerBot World' ) );
 assert_test( 'Allowlist: URI Match', $allowlist->path_match( '/public-api/v1/get' ) );
 
 // Test Suite 3: Rate Limiter
