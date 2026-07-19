@@ -39,6 +39,7 @@ class ATG_Admin {
 	 * Register hooks.
 	 */
 	public function hooks() {
+		add_action( 'admin_init', array( $this, 'dismiss_conflict_notice' ) );
 		add_action( 'admin_menu', array( $this, 'menu' ) );
 		add_action( 'network_admin_menu', array( $this, 'network_menu' ) );
 		add_action( 'admin_enqueue_scripts', array( $this, 'assets' ) );
@@ -247,7 +248,7 @@ class ATG_Admin {
 	public function network_menu() {
 		add_menu_page(
 			__( 'Bot Shield Pro Network Settings', 'ai-traffic-guardian' ),
-			__( 'Traffic Guardian', 'ai-traffic-guardian' ),
+			__( 'Bot Shield Pro', 'ai-traffic-guardian' ),
 			'manage_network_options',
 			'atg-network-settings',
 			array( $this, 'render_network_page' ),
@@ -355,16 +356,6 @@ class ATG_Admin {
 			$dismissed = array();
 		}
 
-		if ( isset( $_GET['atg_dismiss_conflict'] ) && check_admin_referer( 'atg_dismiss_conflict' ) ) {
-			$to_dismiss = sanitize_text_field( wp_unslash( $_GET['atg_dismiss_conflict'] ) );
-			if ( ! in_array( $to_dismiss, $dismissed, true ) ) {
-				$dismissed[] = $to_dismiss;
-				update_user_meta( $user_id, 'atg_dismissed_conflicts', $dismissed );
-			}
-			wp_safe_redirect( remove_query_arg( array( 'atg_dismiss_conflict', '_wpnonce' ) ) );
-			exit;
-		}
-
 		// Detect high DB rate-limiter load.
 		if ( ! wp_using_ext_object_cache() && ! in_array( 'no_object_cache', $dismissed, true ) ) {
 			global $wpdb;
@@ -431,6 +422,29 @@ class ATG_Admin {
 			echo '<div class="notice notice-info is-dismissible">';
 			echo '<p><strong>' . esc_html__( 'Your 7-Day Bot Audit Report is ready!', 'ai-traffic-guardian' ) . '</strong> ' . sprintf( /* translators: %s link */ esc_html__( 'Analyze AI crawler overhead, bandwidth waste, and traffic composition in your %s.', 'ai-traffic-guardian' ), '<a href="' . esc_url( $report_url ) . '">' . esc_html__( 'Bot Audit Report', 'ai-traffic-guardian' ) . '</a>' ) . '</p>';
 			echo '</div>';
+		}
+	}
+
+	/**
+	 * Handle dismissing conflict notices via admin_init.
+	 */
+	public function dismiss_conflict_notice() {
+		if ( ! current_user_can( 'manage_options' ) ) {
+			return;
+		}
+		if ( isset( $_GET['atg_dismiss_conflict'] ) && check_admin_referer( 'atg_dismiss_conflict' ) ) {
+			$user_id   = get_current_user_id();
+			$dismissed = get_user_meta( $user_id, 'atg_dismissed_conflicts', true );
+			if ( ! is_array( $dismissed ) ) {
+				$dismissed = array();
+			}
+			$to_dismiss = sanitize_text_field( wp_unslash( $_GET['atg_dismiss_conflict'] ) );
+			if ( ! in_array( $to_dismiss, $dismissed, true ) ) {
+				$dismissed[] = $to_dismiss;
+				update_user_meta( $user_id, 'atg_dismissed_conflicts', $dismissed );
+			}
+			wp_safe_redirect( remove_query_arg( array( 'atg_dismiss_conflict', '_wpnonce' ) ) );
+			exit;
 		}
 	}
 }
