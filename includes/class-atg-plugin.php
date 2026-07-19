@@ -360,7 +360,7 @@ final class ATG_Plugin {
 		$text  = '<h2>' . esc_html__( 'Bot Traffic Detection', 'ai-traffic-guardian' ) . '</h2>';
 		$text .= '<p>' . sprintf(
 			/* translators: 1: hashed/record string, 2: retention days */
-			esc_html__( 'This site uses AI Traffic Guardian to detect and manage automated bot traffic. It may log a %1$s of your IP address, your browser\'s user agent string, and the page paths you visit. This data is retained for %2$s days and is used solely for security and traffic analysis.', 'ai-traffic-guardian' ),
+			esc_html__( 'This site uses Bot Shield Pro to detect and manage automated bot traffic. It may log a %1$s of your IP address, your browser\'s user agent string, and the page paths you visit. This data is retained for %2$s days and is used solely for security and traffic analysis.', 'ai-traffic-guardian' ),
 			$this->get( 'hash_ips', true ) ? esc_html__( 'cryptographic hash', 'ai-traffic-guardian' ) : esc_html__( 'record', 'ai-traffic-guardian' ),
 			esc_html( $this->get( 'retention_days', 30 ) )
 		) . '</p>';
@@ -426,3 +426,4 @@ final class ATG_Plugin {
 		);
 	}
 }
+

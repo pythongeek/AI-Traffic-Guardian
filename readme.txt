@@ -1,4 +1,4 @@
-=== AI Traffic Guardian ===
+=== Bot Shield Pro ===
 Contributors: aitrafficguardian
 Tags: ai bots, bot protection, ai crawlers, woocommerce, analytics
 Requires at least: 6.0
@@ -12,7 +12,7 @@ Layered AI & bot traffic control: verified-bot classification, vendor×purpose p
 
 == Description ==
 
-AI crawlers, scrapers and fraud bots now make up a large share of WordPress traffic. AI Traffic Guardian gives you **visibility first, control second** — so you never block real customers while you tune your policies.
+AI crawlers, scrapers and fraud bots now make up a large share of WordPress traffic. Bot Shield Pro gives you **visibility first, control second** — so you never block real customers while you tune your policies.
 
 = How it works =
 
@@ -72,3 +72,4 @@ Yes — per-site tables and policies. Network activation provisions up to 100 si
 
 = 1.0.0 =
 * Initial release.
+

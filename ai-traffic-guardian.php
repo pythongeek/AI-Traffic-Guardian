@@ -1,12 +1,12 @@
 <?php
 /**
- * Plugin Name:       AI Traffic Guardian
+ * Plugin Name:       Bot Shield Pro
  * Plugin URI:        https://example.com/ai-traffic-guardian
  * Description:       Layered AI & bot traffic control for WordPress: verified-bot classification, vendor×purpose policy engine, analytics integrity, accessible form & WooCommerce protection, robots.txt / llms.txt management, shadow mode and a full visual dashboard.
  * Version:           1.0.0
  * Requires at least: 6.0
  * Requires PHP:      7.4
- * Author:            AI Traffic Guardian
+ * Author:            Bot Shield Pro
  * License:           GPL-2.0-or-later
  * License URI:       https://www.gnu.org/licenses/gpl-2.0.html
  * Text Domain:       ai-traffic-guardian
@@ -78,3 +78,4 @@ if ( ! function_exists( 'atg_boot' ) ) {
 	}
 	add_action( 'plugins_loaded', 'atg_boot', 5 );
 }
+

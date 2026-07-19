@@ -1,4 +1,4 @@
-# AI Traffic Guardian — edge integration contract (Phase 0)
+# Bot Shield Pro — edge integration contract (Phase 0)
 
 This document is the single source of truth for the Cloudflare Worker companion feature. Every phase (WP REST endpoints, the Worker, the sync job, the setup wizard) must match this exactly. If any phase needs to deviate, update this file first, then the code.
 
@@ -158,3 +158,4 @@ signature = hex(HMAC_SHA256(secret, message))
 - The Worker must never call `/wp-json/atg/v1/verify` for a request already resolved by the cached snapshot — that defeats the entire point of the edge layer.
 - The WP plugin must never write to KV on every request — only on policy change or the scheduled refresh (section 2 write cadence).
 - Neither side may skip signature verification "temporarily for testing" in a code path that could ship — use a separate `ATG_DEBUG_MODE` flag with its own explicit warning in the setup wizard instead.
+

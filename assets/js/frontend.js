@@ -1,5 +1,5 @@
 /**
- * AI Traffic Guardian — accessible human-confirmation beacon.
+ * Bot Shield Pro — accessible human-confirmation beacon.
  *
  * Accessibility contract:
  *  - Never blocks rendering, never gates any form, never required.
@@ -48,3 +48,4 @@
 	window.addEventListener('touchstart', function () { confirmHuman('touch'); }, opts);
 	window.addEventListener('scroll', function () { confirmHuman('scroll'); }, opts);
 })();
+

@@ -50,7 +50,7 @@ class ATG_Robots {
 		$plugin = ATG_Plugin::instance();
 		$matrix = $plugin->policy->matrix();
 
-		$blocks = array( '# BEGIN AI Traffic Guardian' );
+		$blocks = array( '# BEGIN Bot Shield Pro' );
 		$added  = 0;
 
 		foreach ( ATG_Bot_Database::signatures() as $sig ) {
@@ -81,7 +81,7 @@ class ATG_Robots {
 			$added++;
 		}
 
-		$blocks[] = '# END AI Traffic Guardian';
+		$blocks[] = '# END Bot Shield Pro';
 		return $added ? implode( "\n", $blocks ) : '';
 	}
 
@@ -127,3 +127,4 @@ class ATG_Robots {
 		return $found;
 	}
 }
+

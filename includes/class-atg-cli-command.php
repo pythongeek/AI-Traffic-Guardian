@@ -1,6 +1,6 @@
 <?php
 /**
- * WP-CLI commands for AI Traffic Guardian.
+ * WP-CLI commands for Bot Shield Pro.
  *
  * @package AI_Traffic_Guardian
  */
@@ -13,7 +13,7 @@ if ( ! defined( 'WP_CLI' ) || ! WP_CLI ) {
 }
 
 /**
- * Manage AI Traffic Guardian from the command line.
+ * Manage Bot Shield Pro from the command line.
  */
 class ATG_CLI_Command {
 
@@ -286,3 +286,4 @@ if ( class_exists( 'WP_CLI' ) ) {
 	WP_CLI::add_command( 'atg env',               array( 'ATG_CLI_Command', 'env' ) );
 	WP_CLI::add_command( 'atg test-report',       array( 'ATG_CLI_Command', 'test_report' ) );
 }
+

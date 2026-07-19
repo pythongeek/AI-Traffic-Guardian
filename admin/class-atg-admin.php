@@ -56,7 +56,7 @@ class ATG_Admin {
 		$badge  = $alerts ? ' <span class="awaiting-mod">' . (int) $alerts . '</span>' : '';
 
 		$is_pro     = ATG_Licensing::atg_is_pro();
-		$page_title = ( $is_pro && defined( 'ATG_BRAND_NAME' ) ) ? ATG_BRAND_NAME : __( 'AI Traffic Guardian', 'ai-traffic-guardian' );
+		$page_title = ( $is_pro && defined( 'ATG_BRAND_NAME' ) ) ? ATG_BRAND_NAME : __( 'Bot Shield Pro', 'ai-traffic-guardian' );
 		$menu_title = ( $is_pro && defined( 'ATG_BRAND_NAME' ) ) ? ATG_BRAND_NAME : __( 'Traffic Guardian', 'ai-traffic-guardian' );
 		$icon       = ( $is_pro && defined( 'ATG_BRAND_ICON' ) ) ? ATG_BRAND_ICON : 'dashicons-shield-alt';
 
@@ -145,7 +145,7 @@ class ATG_Admin {
 		}
 		$is_pro = ATG_Licensing::atg_is_pro();
 		if ( ! $is_pro || ! defined( 'ATG_BRAND_HIDE_CREDITS' ) || ! ATG_BRAND_HIDE_CREDITS ) {
-			echo '<p class="atg-footer-credit">' . esc_html__( 'Powered by AI Traffic Guardian', 'ai-traffic-guardian' ) . '</p>';
+			echo '<p class="atg-footer-credit">' . esc_html__( 'Powered by Bot Shield Pro', 'ai-traffic-guardian' ) . '</p>';
 		}
 		do_action( 'atg_dashboard_footer' );
 		echo '</div>';
@@ -160,7 +160,7 @@ class ATG_Admin {
 		$plugin     = ATG_Plugin::instance();
 		$mode       = $plugin->enforcement_mode();
 		$is_pro     = ATG_Licensing::atg_is_pro();
-		$brand_name = ( $is_pro && defined( 'ATG_BRAND_NAME' ) ) ? ATG_BRAND_NAME : __( 'AI Traffic Guardian', 'ai-traffic-guardian' );
+		$brand_name = ( $is_pro && defined( 'ATG_BRAND_NAME' ) ) ? ATG_BRAND_NAME : __( 'Bot Shield Pro', 'ai-traffic-guardian' );
 		$logo_url   = ( $is_pro && defined( 'ATG_BRAND_LOGO_URL' ) ) ? ATG_BRAND_LOGO_URL : '';
 		$icon_class = ( $is_pro && defined( 'ATG_BRAND_ICON' ) ) ? ATG_BRAND_ICON : 'dashicons-shield-alt';
 		$labels     = array(
@@ -174,7 +174,16 @@ class ATG_Admin {
 				<?php if ( $logo_url ) : ?>
 					<img src="<?php echo esc_url( $logo_url ); ?>" height="32" alt="<?php echo esc_attr( $brand_name ); ?>" />
 				<?php else : ?>
-					<span class="dashicons <?php echo esc_attr( $icon_class ); ?>"></span>
+					<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="32" height="32" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color: #6366f1; filter: drop-shadow(0 0 8px rgba(99, 102, 241, 0.4)); flex-shrink: 0;">
+						<path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" fill="url(#atgLogoGrad)" />
+						<polyline points="22 4 12 14.01 9 11.01" stroke="#ffffff" stroke-width="2.5" />
+						<defs>
+							<linearGradient id="atgLogoGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+								<stop offset="0%" stop-color="#4f46e5" />
+								<stop offset="100%" stop-color="#06b6d4" />
+							</linearGradient>
+						</defs>
+					</svg>
 				<?php endif; ?>
 				<div>
 					<strong><?php echo esc_html( $brand_name ); ?></strong>
@@ -237,7 +246,7 @@ class ATG_Admin {
 	 */
 	public function network_menu() {
 		add_menu_page(
-			__( 'AI Traffic Guardian Network Settings', 'ai-traffic-guardian' ),
+			__( 'Bot Shield Pro Network Settings', 'ai-traffic-guardian' ),
 			__( 'Traffic Guardian', 'ai-traffic-guardian' ),
 			'manage_network_options',
 			'atg-network-settings',
@@ -283,7 +292,7 @@ class ATG_Admin {
 		$settings = wp_parse_args( $settings, $defaults );
 		?>
 		<div class="wrap">
-			<h1><?php esc_html_e( 'AI Traffic Guardian — Network Baseline Settings', 'ai-traffic-guardian' ); ?></h1>
+			<h1><?php esc_html_e( 'Bot Shield Pro — Network Baseline Settings', 'ai-traffic-guardian' ); ?></h1>
 			<form method="post" action="">
 				<?php wp_nonce_field( 'atg-network-settings' ); ?>
 				<table class="form-table">
@@ -372,7 +381,7 @@ class ATG_Admin {
 			if ( $rpm > 500 ) {
 				$dismiss_url = wp_nonce_url( add_query_arg( 'atg_dismiss_conflict', 'no_object_cache' ), 'atg_dismiss_conflict' );
 				echo '<div class="notice notice-warning is-dismissible" style="position:relative;">';
-				echo '<p><strong>' . esc_html__( 'AI Traffic Guardian warning: High database rate-limiting load', 'ai-traffic-guardian' ) . '</strong></p>';
+				echo '<p><strong>' . esc_html__( 'Bot Shield Pro warning: High database rate-limiting load', 'ai-traffic-guardian' ) . '</strong></p>';
 				/* translators: %d requests per minute */
 				echo '<p>' . sprintf( esc_html__( 'Your site is serving approximately %d rpm but is not using a persistent object cache. Rate limiter transients are causing heavy database write load. Action: Install/configure Redis or Memcached.', 'ai-traffic-guardian' ), (int) $rpm ) . '</p>';
 				echo '<p><a href="' . esc_url( $dismiss_url ) . '">' . esc_html__( 'Dismiss this warning', 'ai-traffic-guardian' ) . '</a></p>';
@@ -396,7 +405,7 @@ class ATG_Admin {
 			}
 
 			$is_pro      = ATG_Licensing::atg_is_pro();
-			$brand_name  = ( $is_pro && defined( 'ATG_BRAND_NAME' ) ) ? ATG_BRAND_NAME : __( 'AI Traffic Guardian', 'ai-traffic-guardian' );
+			$brand_name  = ( $is_pro && defined( 'ATG_BRAND_NAME' ) ) ? ATG_BRAND_NAME : __( 'Bot Shield Pro', 'ai-traffic-guardian' );
 			$dismiss_url = wp_nonce_url( add_query_arg( 'atg_dismiss_conflict', $plugin_name ), 'atg_dismiss_conflict' );
 
 			echo '<div class="notice notice-warning is-dismissible" style="position:relative;">';
@@ -425,3 +434,4 @@ class ATG_Admin {
 		}
 	}
 }
+

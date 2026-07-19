@@ -70,7 +70,7 @@ class ATG_Alerts {
 		$is_staging = $plugin->get( 'staging_mode', false ) || ( defined( 'WP_ENV' ) && 'staging' === WP_ENV ) || ( defined( 'WP_DEBUG' ) && WP_DEBUG );
 		if ( $plugin->get( 'alert_email', false ) && ! $is_staging ) {
 			$to      = get_option( 'admin_email' );
-			$subject = sprintf( /* translators: %s alert title */ __( '[AI Traffic Guardian] %s', 'ai-traffic-guardian' ), $title );
+			$subject = sprintf( /* translators: %s alert title */ __( '[Bot Shield Pro] %s', 'ai-traffic-guardian' ), $title );
 			$body    = $title . "\n\n" . print_r( $payload, true ); // phpcs:ignore WordPress.PHP.DevelopmentFunctions
 			wp_mail( $to, $subject, $body );
 		}
@@ -150,7 +150,7 @@ class ATG_Alerts {
 			esc_html(
 				sprintf(
 					/* translators: %d number of alerts */
-					_n( 'AI Traffic Guardian detected %d new bot signature in your traffic.', 'AI Traffic Guardian detected %d new bot signatures in your traffic.', $count, 'ai-traffic-guardian' ),
+					_n( 'Bot Shield Pro detected %d new bot signature in your traffic.', 'Bot Shield Pro detected %d new bot signatures in your traffic.', $count, 'ai-traffic-guardian' ),
 					$count
 				)
 			),
@@ -159,3 +159,4 @@ class ATG_Alerts {
 		);
 	}
 }
+

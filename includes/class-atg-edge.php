@@ -219,7 +219,7 @@ class ATG_Edge {
 
 		return <<<JS
 /**
- * Cloudflare Worker for Bot Shield Pro / AI Traffic Guardian Edge Layer
+ * Cloudflare Worker for Bot Shield Pro / Bot Shield Pro Edge Layer
  */
 const SITE_ID = "{$site_id}";
 
@@ -363,3 +363,4 @@ JS;
 		return $out;
 	}
 }
+

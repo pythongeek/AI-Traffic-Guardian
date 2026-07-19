@@ -1,5 +1,5 @@
 /**
- * AI Traffic Guardian — admin dashboard controller.
+ * Bot Shield Pro — admin dashboard controller.
  * Vanilla JS + Chart.js. Talks to the atg/v1 REST API.
  */
 (function () {
@@ -982,3 +982,4 @@
 		}
 	});
 })();
+

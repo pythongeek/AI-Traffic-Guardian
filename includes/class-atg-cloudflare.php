@@ -103,7 +103,7 @@ class ATG_Cloudflare {
 
 		if ( is_wp_error( $response ) ) {
 			// phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_error_log
-			error_log( 'AI Traffic Guardian: Cloudflare Edge Push failed: ' . $response->get_error_message() );
+			error_log( 'Bot Shield Pro: Cloudflare Edge Push failed: ' . $response->get_error_message() );
 		}
 	}
 
@@ -153,3 +153,4 @@ class ATG_Cloudflare {
 		}
 	}
 }
+
