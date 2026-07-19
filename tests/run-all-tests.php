@@ -50,7 +50,25 @@ if ( ! defined( 'YEAR_IN_SECONDS' ) ) {
 	define( 'YEAR_IN_SECONDS', 31536000 );
 }
 
-// Mocked options store
+if ( ! class_exists( 'WP_Error' ) ) {
+	class WP_Error {
+		public $errors = array();
+		public function add( $code, $message ) {
+			$this->errors[ $code ] = $message;
+		}
+		public function has_errors() {
+			return ! empty( $this->errors );
+		}
+	}
+}
+
+if ( ! function_exists( 'wp_salt' ) ) {
+	function wp_salt( $scheme = 'auth' ) {
+		return 'mocked_salt_key';
+	}
+}
+
+// Mocked options store (used in CLI fallback)
 $options = array(
 	'atg_preset'                => 'balanced',
 	'atg_settings'              => array(
@@ -93,6 +111,14 @@ if ( ! function_exists( 'update_option' ) ) {
 		global $options, $options_saved;
 		$options[ $name ]       = $value;
 		$options_saved[ $name ] = $value;
+		return true;
+	}
+}
+
+if ( ! function_exists( 'delete_option' ) ) {
+	function delete_option( $name ) {
+		global $options;
+		unset( $options[ $name ] );
 		return true;
 	}
 }
@@ -179,23 +205,6 @@ if ( ! function_exists( 'add_filter' ) ) {
 if ( ! function_exists( '__' ) ) {
 	function __ ( $text, $domain = 'default' ) { return $text; }
 }
-if ( ! class_exists( 'WP_Error' ) ) {
-	class WP_Error {
-		public $errors = array();
-		public function add( $code, $message ) {
-			$this->errors[ $code ] = $message;
-		}
-		public function has_errors() {
-			return ! empty( $this->errors );
-		}
-	}
-}
-
-if ( ! function_exists( 'wp_salt' ) ) {
-	function wp_salt( $scheme = 'auth' ) {
-		return 'mocked_salt_key';
-	}
-}
 
 // Mock Database wrapper if WP DB not initialized
 if ( ! isset( $GLOBALS['wpdb'] ) ) {
@@ -277,107 +286,322 @@ require_once dirname( __DIR__ ) . '/includes/class-atg-rate-limiter.php';
 require_once dirname( __DIR__ ) . '/includes/class-atg-form-guard.php';
 require_once dirname( __DIR__ ) . '/includes/class-atg-licensing.php';
 require_once dirname( __DIR__ ) . '/includes/class-atg-bot-audit.php';
+require_once dirname( __DIR__ ) . '/includes/class-atg-verifier.php';
 
 // Helper reporting
 $passed = 0;
 $failed = 0;
 $results_log = array();
 
-function assert_test( $name, $assertion ) {
+function assert_test( $name, $assertion, $expected = '', $actual = '', $message = '' ) {
 	global $passed, $failed, $results_log;
 	if ( $assertion ) {
-		$results_log[] = array( 'status' => 'PASS', 'name' => $name );
+		$results_log[] = array(
+			'status'   => 'PASS',
+			'name'     => $name,
+			'expected' => $expected,
+			'actual'   => $actual,
+			'message'  => $message ? $message : 'Condition met successfully.'
+		);
 		$passed++;
 	} else {
-		$results_log[] = array( 'status' => 'FAIL', 'name' => $name );
+		$results_log[] = array(
+			'status'   => 'FAIL',
+			'name'     => $name,
+			'expected' => $expected,
+			'actual'   => $actual,
+			'message'  => $message ? $message : 'Condition was not met.'
+		);
 		$failed++;
 	}
 }
 
+// Helper to set options dynamically (works in both WP and CLI)
+function set_test_option( $key, $value ) {
+	global $options;
+	$options[ $key ] = $value;
+	update_option( $key, $value );
+}
+
 /* ----------------------------------------------------------------
- * RUNNING TESTS
+ * OPTIONS BACKUP
  * ---------------------------------------------------------------- */
-$classifier = new ATG_Classifier();
-
-// Test Suite 1: Classifier & Presets
-$options['atg_preset'] = 'balanced';
-$res = $classifier->classify( 'Googlebot/2.1', '66.249.66.1', '/', false );
-assert_test( 'Balanced mode: Googlebot allowed', 'google' === $res['vendor'] && 'allow' === $res['action'] );
-
-$options['atg_preset'] = 'strict';
-$res = $classifier->classify( 'MysteriousCrawler/1.0', '192.168.1.5', '/', false );
-assert_test( 'Strict mode: Unknown bot blocked', 'block' === $res['action'] );
-
-$options['atg_preset'] = 'headless';
-$res = $classifier->classify( 'Googlebot', '66.249.66.1', '/wp-json/wp/v2/posts', true );
-assert_test( 'Headless mode: REST path triggers headless_rest classification', 'headless_rest' === $res['classification'] );
-
-$res = $classifier->classify( 'Googlebot', '66.249.66.1', '/wp-json/wp/v2/posts', true, array( 'HTTP_AUTHORIZATION' => 'Bearer token123' ) );
-assert_test( 'Headless mode: REST path with Authorization header bypassed', 'allow' === $res['action'] );
-
-$res = $classifier->classify( 'CustomSpider/3.1', '10.0.0.1', '/', false );
-assert_test( 'Custom Signature: matches and classifies Custom Spider', 'custom_0' === $res['classification'] && 'Spider Corp' === $res['vendor'] );
-
-// Test Suite 2: Allowlist Engine
-$allowlist = new ATG_Allowlist();
-assert_test( 'Allowlist: IP Match', $allowlist->ip_allowed( '192.168.1.100' ) );
-assert_test( 'Allowlist: IP Mismatch', ! $allowlist->ip_allowed( '192.168.1.101' ) );
-assert_test( 'Allowlist: Agent Regex Match', false !== $allowlist->ua_allowed( 'Hello TrustedPartnerBot World' ) );
-assert_test( 'Allowlist: URI Match', $allowlist->path_match( '/public-api/v1/get' ) );
-
-// Test Suite 3: Rate Limiter
-$limiter = new ATG_Rate_Limiter();
-$decision = array(
-	'ip'      => '10.0.0.50',
-	'session' => 'sess_123',
-	'action'  => 'allow',
-	'reason'  => '',
-	'risk'    => 0,
+$original_options = array();
+$option_keys = array(
+	'atg_preset',
+	'atg_settings',
+	'atg_custom_rest_namespace',
+	'atg_allowlist',
+	'atg_custom_signatures',
+	'atg_license_status',
 );
-global $options, $transients;
-$options['atg_settings']['rate_enabled']   = true;
-$options['atg_settings']['rate_human_rpm'] = 2;
-$options['atg_settings']['rate_burst']     = 1;
-$transients = array();
 
-$res1 = $limiter->check( $decision, 'human' );
-$res2 = $limiter->check( $decision, 'human' );
-$res3 = $limiter->check( $decision, 'human' );
+foreach ( $option_keys as $key ) {
+	$original_options[ $key ] = get_option( $key );
+}
 
-assert_test( 'Rate Limiter: First hits within limit are allowed', 'allow' === $res1['action'] && 'allow' === $res2['action'] );
-assert_test( 'Rate Limiter: Exceeding limit triggers throttle', 'throttle' === $res3['action'] );
+try {
+	// Seed configuration options in database for test runner
+	set_test_option( 'atg_allowlist', array(
+		'ips'        => array( '192.168.1.100' ),
+		'paths'      => array( '/public-api/' ),
+		'uas'        => array( 'TrustedPartnerBot' ),
+		'path_rules' => array(),
+	) );
+	set_test_option( 'atg_custom_signatures', array(
+		array(
+			'name'    => 'Custom Spider',
+			'vendor'  => 'Spider Corp',
+			'purpose' => 'commercial',
+			'pattern' => 'CustomSpider/\\d',
+			'verify'  => 'none',
+		),
+	) );
+	set_test_option( 'atg_custom_rest_namespace', 'my-api/v1' );
 
+	// Seed identity verifier cache for Googlebot reverse-DNS mock
+	$cache_key = 'atg_v_' . md5( '66.249.66.1|Googlebot' );
+	set_transient( $cache_key, 'verified', 3600 );
 
-// Test Suite 4: Form Guard
-$guard = new ATG_Form_Guard();
+	$classifier = new ATG_Classifier();
 
-$session = isset( $_COOKIE['atg_sid'] ) ? sanitize_text_field( wp_unslash( $_COOKIE['atg_sid'] ) ) : 'none';
-$token = hash_hmac( 'sha256', 'form|' . $session, wp_salt( 'nonce' ) );
+	// Test Suite 1: Classifier & Presets
+	set_test_option( 'atg_preset', 'balanced' );
+	set_test_option( 'atg_settings', array(
+		'auth_bypass'       => true,
+		'enforcement'       => 'active',
+		'honeypot_action'   => 'block',
+		'wc_checkout_guard' => 'block',
+	) );
 
-$_POST['atg_hp'] = '';
-$_POST['atg_tok'] = $token;
+	$res = $classifier->classify( 'Googlebot/2.1', '66.249.66.1', '/', false );
+	assert_test(
+		'Balanced mode: Googlebot allowed',
+		'google' === $res['vendor'] && 'allow' === $res['action'],
+		'vendor: google, action: allow',
+		"vendor: {$res['vendor']}, action: {$res['action']}",
+		'Verified Googlebot should be allowed under the Balanced preset.'
+	);
 
-$errors = new WP_Error();
-$errors = $guard->check_registration( $errors );
-assert_test( 'Form Guard: Clean submission with valid token allowed', ! $errors->has_errors() );
+	set_test_option( 'atg_preset', 'strict' );
+	$res = $classifier->classify( 'MysteriousCrawler/1.0', '192.168.1.5', '/', false );
+	assert_test(
+		'Strict mode: Unknown bot blocked',
+		'block' === $res['action'],
+		'action: block',
+		"action: {$res['action']}",
+		'Unrecognized bots should be blocked under the Strict preset.'
+	);
 
-$_POST['atg_hp'] = 'spambot@spam.com';
-$errors_spam = new WP_Error();
-$errors_spam = $guard->check_registration( $errors_spam );
-assert_test( 'Form Guard: Filled honeypot classified as spam', $errors_spam->has_errors() );
+	set_test_option( 'atg_preset', 'headless' );
+	$res = $classifier->classify( 'Googlebot', '66.249.66.1', '/wp-json/wp/v2/posts', true );
+	assert_test(
+		'Headless mode: REST path triggers headless_rest classification',
+		'headless_rest' === $res['classification'],
+		'classification: headless_rest',
+		"classification: {$res['classification']}",
+		'REST route should trigger headless_rest classification under the Headless preset.'
+	);
 
-// Test Suite 5: Licensing
-$options['atg_license_status'] = '';
-assert_test( 'Licensing: Default state is inactive/free', ! ATG_Licensing::atg_is_pro() );
-$options['atg_license_status'] = 'active';
-assert_test( 'Licensing: Active state returns pro status', ATG_Licensing::atg_is_pro() );
+	$res = $classifier->classify( 'Googlebot', '66.249.66.1', '/wp-json/wp/v2/posts', true, array( 'HTTP_AUTHORIZATION' => 'Bearer token123' ) );
+	assert_test(
+		'Headless mode: REST path with Authorization header bypassed',
+		'allow' === $res['action'],
+		'action: allow',
+		"action: {$res['action']}",
+		'Headless request with valid authentication header should be allowed.'
+	);
 
-// Test Suite 6: Security Audit Engine
-$audit = new ATG_Bot_Audit();
-$report = $audit->run();
-assert_test( 'Audit: Generated audit grade is returned', isset( $report['grade'] ) );
-assert_test( 'Audit: Sections check structure exists', isset( $report['sections']['wp_hardening'] ) );
+	$res = $classifier->classify( 'CustomSpider/3.1', '10.0.0.1', '/', false );
+	assert_test(
+		'Custom Signature: matches and classifies Custom Spider',
+		'custom_0' === $res['classification'] && 'Spider Corp' === $res['vendor'],
+		'classification: custom_0, vendor: Spider Corp',
+		"classification: {$res['classification']}, vendor: {$res['vendor']}",
+		'Custom regex signature should match and map to the custom vendor name.'
+	);
 
+	// Test Suite 2: Allowlist Engine
+	$allowlist = new ATG_Allowlist();
+	assert_test(
+		'Allowlist: IP Match',
+		$allowlist->ip_allowed( '192.168.1.100' ),
+		'true',
+		$allowlist->ip_allowed( '192.168.1.100' ) ? 'true' : 'false',
+		'IP listed in the allowlist must return true.'
+	);
+	assert_test(
+		'Allowlist: IP Mismatch',
+		! $allowlist->ip_allowed( '192.168.1.101' ),
+		'false',
+		$allowlist->ip_allowed( '192.168.1.101' ) ? 'true' : 'false',
+		'IP not in the allowlist must return false.'
+	);
+	assert_test(
+		'Allowlist: Agent Regex Match',
+		false !== $allowlist->ua_allowed( 'Hello TrustedPartnerBot World' ),
+		'non-false',
+		$allowlist->ua_allowed( 'Hello TrustedPartnerBot World' ) ? 'matched' : 'false',
+		'UA containing the custom sub-string should match allowlist rules.'
+	);
+	assert_test(
+		'Allowlist: URI Match',
+		false !== $allowlist->path_match( '/public-api/v1/get' ),
+		'non-false',
+		$allowlist->path_match( '/public-api/v1/get' ) ? 'matched' : 'false',
+		'Request URL matching prefix rules should be allowed.'
+	);
+
+	// Test Suite 3: Rate Limiter
+	$limiter = new ATG_Rate_Limiter();
+	$decision = array(
+		'ip'      => '10.0.0.50',
+		'session' => 'sess_123',
+		'action'  => 'allow',
+		'reason'  => '',
+		'risk'    => 0,
+	);
+
+	set_test_option( 'atg_settings', array(
+		'rate_enabled'   => true,
+		'rate_human_rpm' => 2,
+		'rate_burst'     => 1,
+	) );
+	
+	// Reset rates
+	delete_transient( 'atg_rl_s_' . md5( 'sess_123' ) );
+	delete_transient( 'atg_rl_i_' . md5( '10.0.0.50' ) );
+
+	$res1 = $limiter->check( $decision, 'human' );
+	$res2 = $limiter->check( $decision, 'human' );
+	$res3 = $limiter->check( $decision, 'human' );
+
+	assert_test(
+		'Rate Limiter: First hits within limit are allowed',
+		'allow' === $res1['action'] && 'allow' === $res2['action'],
+		'action: allow, action: allow',
+		"action: {$res1['action']}, action: {$res2['action']}",
+		'Initial requests under the thresholds must proceed uninterrupted.'
+	);
+	assert_test(
+		'Rate Limiter: Exceeding limit triggers throttle',
+		'throttle' === $res3['action'],
+		'action: throttle',
+		"action: {$res3['action']}",
+		'Excessive request counts should trigger progressive throttling.'
+	);
+
+	// Test Suite 4: Form Guard
+	$guard = new ATG_Form_Guard();
+
+	$session = isset( $_COOKIE['atg_sid'] ) ? sanitize_text_field( wp_unslash( $_COOKIE['atg_sid'] ) ) : 'none';
+	$token = hash_hmac( 'sha256', 'form|' . $session, wp_salt( 'nonce' ) );
+
+	// Temporarily clear user login scope so Form Guard doesn't automatically trust current admin session
+	$old_user_id = 0;
+	if ( function_exists( 'wp_set_current_user' ) && function_exists( 'get_current_user_id' ) ) {
+		$old_user_id = get_current_user_id();
+		wp_set_current_user( 0 );
+	}
+
+	$_POST['atg_hp'] = '';
+	$_POST['atg_tok'] = $token;
+
+	$errors = new WP_Error();
+	$errors = $guard->check_registration( $errors );
+	assert_test(
+		'Form Guard: Clean submission with valid token allowed',
+		! $errors->has_errors(),
+		'no errors',
+		$errors->has_errors() ? 'has errors' : 'no errors',
+		'Standard registration forms with correct tokens should pass.'
+	);
+
+	$_POST['atg_hp'] = 'spambot@spam.com';
+	$errors_spam = new WP_Error();
+	$errors_spam = $guard->check_registration( $errors_spam );
+	assert_test(
+		'Form Guard: Filled honeypot classified as spam',
+		$errors_spam->has_errors(),
+		'has errors',
+		$errors_spam->has_errors() ? 'has errors' : 'no errors',
+		'Submissions with populated honeypot fields must be blocked as spam.'
+	);
+
+	// Restore user session if applicable
+	if ( $old_user_id > 0 && function_exists( 'wp_set_current_user' ) ) {
+		wp_set_current_user( $old_user_id );
+	}
+
+	// Test Suite 5: Licensing
+	set_test_option( 'atg_license_status', '' );
+	assert_test(
+		'Licensing: Default state is inactive/free',
+		! ATG_Licensing::atg_is_pro(),
+		'false',
+		ATG_Licensing::atg_is_pro() ? 'true' : 'false',
+		'Default licensing check should show false / free tier status.'
+	);
+
+	set_test_option( 'atg_license_status', 'active' );
+	assert_test(
+		'Licensing: Active state returns pro status',
+		ATG_Licensing::atg_is_pro(),
+		'true',
+		ATG_Licensing::atg_is_pro() ? 'true' : 'false',
+		'Active licensing check should show true / pro tier status.'
+	);
+
+	// Test Suite 6: Security Audit Engine
+	$audit = new ATG_Bot_Audit();
+	$report = $audit->run();
+	assert_test(
+		'Audit: Generated audit grade is returned',
+		isset( $report['grade'] ),
+		'grade exists',
+		isset( $report['grade'] ) ? 'grade exists' : 'grade missing',
+		'Audit results must produce a grading report.'
+	);
+	assert_test(
+		'Audit: Sections check structure exists',
+		isset( $report['sections']['security'] ),
+		'security section exists',
+		isset( $report['sections']['security'] ) ? 'security section exists' : 'security section missing',
+		'Audit output must contain the security analysis sub-component.'
+	);
+
+} finally {
+	/* ----------------------------------------------------------------
+	 * OPTIONS RESTORE
+	 * ---------------------------------------------------------------- */
+	foreach ( $original_options as $key => $val ) {
+		if ( false === $val ) {
+			delete_option( $key );
+		} else {
+			update_option( $key, $val );
+		}
+	}
+	
+	// Clean up verifier mock transient
+	delete_transient( $cache_key );
+}
+
+/* ----------------------------------------------------------------
+ * FILE LOG WRITING
+ * ---------------------------------------------------------------- */
+$log_content = "Bot Shield Pro Test Suite - Run at " . date( 'Y-m-d H:i:s' ) . "\n";
+$log_content .= "======================================================================\n";
+foreach ( $results_log as $log ) {
+	$log_content .= "[{$log['status']}] {$log['name']}\n";
+	$log_content .= "  Expected: {$log['expected']}\n";
+	$log_content .= "  Actual:   {$log['actual']}\n";
+	$log_content .= "  Details:  {$log['message']}\n\n";
+}
+$log_content .= "======================================================================\n";
+$log_content .= "Summary: Passed: $passed, Failed: $failed\n";
+
+$log_file_path = __DIR__ . '/test-run-log.txt';
+@file_put_contents( $log_file_path, $log_content );
 
 /* ----------------------------------------------------------------
  * RENDERING OUTPUT
@@ -389,6 +613,9 @@ if ( $is_cli ) {
 			echo "\033[32m[PASS]\033[0m " . $log['name'] . "\n";
 		} else {
 			echo "\033[31m[FAIL]\033[0m " . $log['name'] . "\n";
+			echo "       Expected: " . $log['expected'] . "\n";
+			echo "       Actual:   " . $log['actual'] . "\n";
+			echo "       Reason:   " . $log['message'] . "\n";
 		}
 	}
 	echo "\n======================================\n";
@@ -401,39 +628,263 @@ if ( $is_cli ) {
 	<!DOCTYPE html>
 	<html>
 	<head>
-		<title>Bot Shield Pro - Test Runner</title>
+		<title>Bot Shield Pro - System Diagnostic Center</title>
+		<meta name="viewport" content="width=device-width, initial-scale=1.0">
 		<style>
-			body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; background: #f1f5f9; color: #1e293b; padding: 40px; margin: 0; }
-			.container { max-width: 800px; margin: 0 auto; background: #ffffff; padding: 30px; border-radius: 12px; box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1); }
-			h1 { font-size: 24px; margin-bottom: 20px; border-bottom: 2px solid #e2e8f0; padding-bottom: 10px; color: #0f172a; }
-			.test-row { display: flex; justify-content: space-between; padding: 12px 15px; border-bottom: 1px solid #f1f5f9; align-items: center; }
-			.test-row:last-child { border-bottom: none; }
-			.status { font-weight: bold; padding: 4px 8px; border-radius: 4px; font-size: 12px; text-transform: uppercase; }
-			.status.pass { background: #dcfce7; color: #15803d; }
-			.status.fail { background: #fee2e2; color: #b91c1c; }
-			.summary { margin-top: 30px; padding: 20px; border-radius: 8px; font-weight: bold; font-size: 16px; text-align: center; }
-			.summary.success { background: #dcfce7; color: #15803d; border: 1px solid #bbf7d0; }
-			.summary.danger { background: #fee2e2; color: #b91c1c; border: 1px solid #fecaca; }
+			:root {
+				--bg-main: #0b0f19;
+				--bg-card: #151c2e;
+				--bg-accent: #1e294b;
+				--border-color: #2e3c64;
+				--text-main: #f8fafc;
+				--text-muted: #94a3b8;
+				--color-pass: #10b981;
+				--color-pass-bg: rgba(16, 185, 129, 0.15);
+				--color-fail: #ef4444;
+				--color-fail-bg: rgba(239, 68, 68, 0.15);
+				--color-purple: #8b5cf6;
+			}
+			body {
+				font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+				background: var(--bg-main);
+				color: var(--text-main);
+				padding: 40px 20px;
+				margin: 0;
+			}
+			.container {
+				max-width: 900px;
+				margin: 0 auto;
+				background: var(--bg-card);
+				padding: 30px;
+				border-radius: 16px;
+				box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.3), 0 8px 10px -6px rgba(0, 0, 0, 0.3);
+				border: 1px solid var(--border-color);
+			}
+			header {
+				display: flex;
+				justify-content: space-between;
+				align-items: center;
+				border-bottom: 1px solid var(--border-color);
+				padding-bottom: 20px;
+				margin-bottom: 25px;
+			}
+			h1 {
+				font-size: 26px;
+				margin: 0;
+				background: linear-gradient(135deg, #c084fc, #6366f1);
+				-webkit-background-clip: text;
+				-webkit-text-fill-color: transparent;
+			}
+			.log-btn {
+				background: var(--bg-accent);
+				border: 1px solid var(--border-color);
+				color: var(--text-main);
+				padding: 8px 16px;
+				border-radius: 8px;
+				font-weight: 500;
+				cursor: pointer;
+				text-decoration: none;
+				display: inline-flex;
+				align-items: center;
+				gap: 8px;
+				transition: all 0.2s ease;
+			}
+			.log-btn:hover {
+				background: var(--border-color);
+				border-color: #475a90;
+			}
+			.stats-grid {
+				display: grid;
+				grid-template-columns: repeat(3, 1fr);
+				gap: 15px;
+				margin-bottom: 25px;
+			}
+			.stat-card {
+				background: var(--bg-main);
+				border: 1px solid var(--border-color);
+				padding: 15px 20px;
+				border-radius: 12px;
+				text-align: center;
+			}
+			.stat-num {
+				font-size: 32px;
+				font-weight: bold;
+				margin-bottom: 5px;
+			}
+			.stat-num.pass { color: var(--color-pass); }
+			.stat-num.fail { color: var(--color-fail); }
+			.stat-num.total { color: var(--color-purple); }
+			.stat-label {
+				font-size: 13px;
+				color: var(--text-muted);
+				text-transform: uppercase;
+				letter-spacing: 0.05em;
+			}
+			.test-row {
+				border: 1px solid var(--border-color);
+				border-radius: 10px;
+				margin-bottom: 12px;
+				overflow: hidden;
+				transition: all 0.2s ease;
+			}
+			.test-header {
+				display: flex;
+				justify-content: space-between;
+				padding: 15px 20px;
+				background: rgba(21, 28, 46, 0.5);
+				align-items: center;
+				cursor: pointer;
+				user-select: none;
+			}
+			.test-header:hover {
+				background: var(--bg-accent);
+			}
+			.test-info {
+				display: flex;
+				align-items: center;
+				gap: 12px;
+			}
+			.status-indicator {
+				width: 10px;
+				height: 10px;
+				border-radius: 50%;
+			}
+			.status-indicator.pass { background-color: var(--color-pass); box-shadow: 0 0 8px var(--color-pass); }
+			.status-indicator.fail { background-color: var(--color-fail); box-shadow: 0 0 8px var(--color-fail); }
+			.test-name {
+				font-weight: 500;
+				font-size: 15px;
+			}
+			.status-badge {
+				font-weight: bold;
+				padding: 4px 10px;
+				border-radius: 6px;
+				font-size: 12px;
+				text-transform: uppercase;
+				letter-spacing: 0.02em;
+			}
+			.status-badge.pass { background: var(--color-pass-bg); color: var(--color-pass); }
+			.status-badge.fail { background: var(--color-fail-bg); color: var(--color-fail); }
+			.test-details {
+				display: none;
+				padding: 20px;
+				background: var(--bg-main);
+				border-top: 1px solid var(--border-color);
+				font-size: 14px;
+				line-height: 1.6;
+			}
+			.test-details p {
+				margin: 0 0 10px 0;
+			}
+			.test-details p:last-child {
+				margin-bottom: 0;
+			}
+			.detail-key {
+				color: var(--text-muted);
+				font-weight: 500;
+				display: inline-block;
+				width: 120px;
+			}
+			.detail-val {
+				font-family: monospace;
+				background: var(--bg-accent);
+				padding: 2px 6px;
+				border-radius: 4px;
+				color: #e2e8f0;
+			}
+			.summary-banner {
+				margin-top: 30px;
+				padding: 20px;
+				border-radius: 12px;
+				text-align: center;
+				font-weight: bold;
+				font-size: 16px;
+				border: 1px solid transparent;
+			}
+			.summary-banner.success {
+				background: var(--color-pass-bg);
+				color: var(--color-pass);
+				border-color: rgba(16, 185, 129, 0.3);
+			}
+			.summary-banner.danger {
+				background: var(--color-fail-bg);
+				color: var(--color-fail);
+				border-color: rgba(239, 68, 68, 0.3);
+			}
 		</style>
+		<script>
+			document.addEventListener('DOMContentLoaded', () => {
+				const rows = document.querySelectorAll('.test-header');
+				rows.forEach(row => {
+					row.addEventListener('click', () => {
+						const details = row.nextElementSibling;
+						if (details.style.display === 'block') {
+							details.style.display = 'none';
+						} else {
+							details.style.display = 'block';
+						}
+					});
+				});
+			});
+		</script>
 	</head>
 	<body>
 		<div class="container">
-			<h1>Bot Shield Pro - System Diagnostics & Tests</h1>
+			<header>
+				<div>
+					<h1>Bot Shield Pro - System Diagnostic Center</h1>
+					<p style="margin: 5px 0 0 0; font-size: 13px; color: var(--text-muted);">Execution time: <?php echo date('Y-m-d H:i:s'); ?></p>
+				</div>
+				<a href="test-run-log.txt" class="log-btn" download>
+					<svg width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
+						<path d="M.5 9.9a.5.5 0 0 1 .5.5v2.5a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-2.5a.5.5 0 0 1 1 0v2.5a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2v-2.5a.5.5 0 0 1 .5-.5z"/>
+						<path d="M7.646 11.854a.5.5 0 0 0 .708 0l3-3a.5.5 0 0 0-.708-.708L8.5 10.293V1.5a.5.5 0 0 0-1 0v8.793L5.354 8.146a.5.5 0 1 0-.708.708l3 3z"/>
+					</svg>
+					Download Text Log
+				</a>
+			</header>
+
+			<div class="stats-grid">
+				<div class="stat-card">
+					<div class="stat-num pass"><?php echo $passed; ?></div>
+					<div class="stat-label">Passed</div>
+				</div>
+				<div class="stat-card">
+					<div class="stat-num fail"><?php echo $failed; ?></div>
+					<div class="stat-label">Failed</div>
+				</div>
+				<div class="stat-card">
+					<div class="stat-num total"><?php echo ( $passed + $failed ); ?></div>
+					<div class="stat-label">Total Tests</div>
+				</div>
+			</div>
+
 			<div class="test-list">
 				<?php foreach ( $results_log as $log ) : ?>
 					<div class="test-row">
-						<span class="test-name"><?php echo htmlspecialchars( $log['name'] ); ?></span>
-						<span class="status <?php echo strtolower( $log['status'] ); ?>"><?php echo $log['status']; ?></span>
+						<div class="test-header">
+							<div class="test-info">
+								<span class="status-indicator <?php echo strtolower( $log['status'] ); ?>"></span>
+								<span class="test-name"><?php echo htmlspecialchars( $log['name'] ); ?></span>
+							</div>
+							<span class="status-badge <?php echo strtolower( $log['status'] ); ?>"><?php echo $log['status']; ?></span>
+						</div>
+						<div class="test-details">
+							<p><span class="detail-key">Description:</span><?php echo htmlspecialchars( $log['message'] ); ?></p>
+							<p><span class="detail-key">Expected:</span><span class="detail-val"><?php echo htmlspecialchars( $log['expected'] ); ?></span></p>
+							<p><span class="detail-key">Actual:</span><span class="detail-val"><?php echo htmlspecialchars( $log['actual'] ); ?></span></p>
+						</div>
 					</div>
 				<?php endforeach; ?>
 			</div>
+
 			<?php if ( $failed === 0 ) : ?>
-				<div class="summary success">
+				<div class="summary-banner success">
 					All tests passed successfully! (<?php echo $passed; ?>/<?php echo $passed; ?>)
 				</div>
 			<?php else : ?>
-				<div class="summary danger">
-					Warning: <?php echo $failed; ?> tests failed! Please check logs.
+				<div class="summary-banner danger">
+					Warning: <?php echo $failed; ?> diagnostics failed. Click on rows to expand the validation log details.
 				</div>
 			<?php endif; ?>
 		</div>
