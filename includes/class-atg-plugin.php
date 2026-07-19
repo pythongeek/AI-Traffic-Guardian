@@ -193,6 +193,8 @@ final class ATG_Plugin {
 		$this->edge->hooks();
 		$this->wizard->hooks();
 		$this->alerts->hooks();
+		ATG_Report_Generator::init();
+		ATG_Licensing::init();
 
 		// GDPR hooks.
 		add_filter( 'wp_privacy_policy_content', array( $this, 'privacy_policy_content' ) );

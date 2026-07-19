@@ -30,15 +30,16 @@ if ( isset( $_POST['atg_license_nonce'] ) && wp_verify_nonce( sanitize_key( $_PO
 			<a href="#cost" class="nav-tab" data-tab="cost" style="font-weight: 600; font-size: 14px; text-decoration: none; padding: 5px 10px; border-bottom: 2px solid transparent; color: #64748b; cursor: pointer; transition: all 0.2s;" onmouseover="this.style.color='#0f172a'" onmouseout="if(!this.classList.contains('nav-tab-active'))this.style.color='#64748b'"><?php esc_html_e( 'Cost & Bandwidth', 'ai-traffic-guardian' ); ?></a>
 		</nav>
 
+		<?php $preferred_view = get_user_meta( get_current_user_id(), 'atg_dashboard_view', true ) ?: 'simple'; ?>
 		<div style="display:flex; align-items:center; gap:10px;">
 			<label style="font-weight:600; font-size:13px; color:#475569;">
-				<input type="checkbox" id="atg-view-mode-toggle" onchange="toggleViewMode(this.checked)" /> <?php esc_html_e( 'Advanced View', 'ai-traffic-guardian' ); ?>
+				<input type="checkbox" id="atg-view-mode-toggle" onchange="toggleViewMode(this.checked)" <?php checked( 'advanced', $preferred_view ); ?> /> <?php esc_html_e( 'Advanced View', 'ai-traffic-guardian' ); ?>
 			</label>
 		</div>
 	</div>
 
 	<!-- Simple View Wrapper -->
-	<div id="atg-simple-view-wrapper">
+	<div id="atg-simple-view-wrapper" style="display: <?php echo 'simple' === $preferred_view ? 'block' : 'none'; ?>;">
 		<div class="atg-card" style="margin-bottom: 20px; border-left: 6px solid <?php echo 'shadow' === $enforcement ? '#f97316' : ( 'active' === $enforcement ? '#16a34a' : '#ef4444' ); ?>;">
 			<div style="display:flex; justify-content:space-between; align-items:center; padding:10px 0;">
 				<div>
@@ -132,7 +133,7 @@ if ( isset( $_POST['atg_license_nonce'] ) && wp_verify_nonce( sanitize_key( $_PO
 		</div>
 
 		<!-- Advanced View Only Section -->
-		<div id="atg-advanced-view-section" style="display:none;">
+		<div id="atg-advanced-view-section" style="display: <?php echo 'advanced' === $preferred_view ? 'block' : 'none'; ?>;">
 			<div class="atg-grid-2">
 				<div class="atg-card">
 					<div class="atg-card-head">
@@ -271,25 +272,38 @@ if ( isset( $_POST['atg_license_nonce'] ) && wp_verify_nonce( sanitize_key( $_PO
 function toggleViewMode(isAdvanced) {
 	var advSection = document.getElementById('atg-advanced-view-section');
 	var simpleSection = document.getElementById('atg-simple-view-wrapper');
+	var val = isAdvanced ? 'advanced' : 'simple';
 
 	if (isAdvanced) {
 		if(advSection) advSection.style.display = 'block';
 		if(simpleSection) simpleSection.style.display = 'none';
-		localStorage.setItem('atg_view_mode', 'advanced');
 	} else {
 		if(advSection) advSection.style.display = 'none';
 		if(simpleSection) simpleSection.style.display = 'block';
-		localStorage.setItem('atg_view_mode', 'simple');
 	}
+
+	localStorage.setItem('atg_view_mode', val);
+
+	// Persist on the server via REST API
+	fetch('<?php echo esc_url( rest_url( "atg/v1/dashboard/view" ) ); ?>', {
+		method: 'POST',
+		headers: {
+			'Content-Type': 'application/json',
+			'X-WP-Nonce': '<?php echo esc_js( wp_create_nonce( "wp_rest" ) ); ?>'
+		},
+		body: JSON.stringify({ view: val })
+	}).catch(function(err) {
+		console.error('Failed to save dashboard view preference', err);
+	});
 }
 
 // Restore user view preference.
 document.addEventListener('DOMContentLoaded', function() {
-	var preferredMode = localStorage.getItem('atg_view_mode') || 'simple';
+	var preferredMode = '<?php echo esc_js( $preferred_view ); ?>' || localStorage.getItem('atg_view_mode') || 'simple';
 	var checkbox = document.getElementById('atg-view-mode-toggle');
 	if (checkbox) {
 		checkbox.checked = (preferredMode === 'advanced');
-		toggleViewMode(checkbox.checked);
+		// Initial state is set server-side via inline CSS display properties
 	}
 });
 </script>

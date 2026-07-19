@@ -29,12 +29,15 @@ $nginx   = ATG_Edge::generate_nginx_map();
 			</p>
 		</div>
 
+		<?php
+		$cf_active = (bool) get_option( 'atg_cloudflare_detected', false );
+		?>
 		<div class="atg-tabs" style="margin-top: 20px;">
-			<button class="button button-secondary active" onclick="switchEdgeTab(event, 'cf-worker')"><?php esc_html_e( 'Cloudflare Worker', 'ai-traffic-guardian' ); ?></button>
-			<button class="button button-secondary" onclick="switchEdgeTab(event, 'nginx-map')"><?php esc_html_e( 'Nginx Map Block', 'ai-traffic-guardian' ); ?></button>
+			<button class="button button-secondary <?php echo $cf_active ? 'active' : ''; ?>" onclick="switchEdgeTab(event, 'cf-worker')"><?php esc_html_e( 'Cloudflare Worker', 'ai-traffic-guardian' ); ?></button>
+			<button class="button button-secondary <?php echo ! $cf_active ? 'active' : ''; ?>" onclick="switchEdgeTab(event, 'nginx-map')"><?php esc_html_e( 'Nginx Map Block', 'ai-traffic-guardian' ); ?></button>
 		</div>
 
-		<div id="cf-worker" class="edge-tab-content" style="margin-top: 20px;">
+		<div id="cf-worker" class="edge-tab-content" style="margin-top: 20px; display: <?php echo $cf_active ? 'block' : 'none'; ?>;">
 			<h3><?php esc_html_e( 'Cloudflare Worker Deployment', 'ai-traffic-guardian' ); ?></h3>
 			<p class="description"><?php esc_html_e( 'Copy the script below and paste it into a new Cloudflare Worker, or connect your API Token to deploy it automatically.', 'ai-traffic-guardian' ); ?></p>
 			
@@ -60,7 +63,7 @@ $nginx   = ATG_Edge::generate_nginx_map();
 			</button>
 		</div>
 
-		<div id="nginx-map" class="edge-tab-content" style="display: none; margin-top: 20px;">
+		<div id="nginx-map" class="edge-tab-content" style="display: <?php echo ! $cf_active ? 'block' : 'none'; ?>; margin-top: 20px;">
 			<h3><?php esc_html_e( 'Nginx User-Agent Map Block', 'ai-traffic-guardian' ); ?></h3>
 			<p class="description"><?php esc_html_e( 'Add this block to your main Nginx configuration file (typically inside your http {} block) to reject blocked crawlers pre-boot.', 'ai-traffic-guardian' ); ?></p>
 			

@@ -244,6 +244,31 @@ class ATG_CLI_Command {
 			WP_CLI::line( str_pad( $key, 24 ) . $val );
 		}
 	}
+
+	/**
+	 * Run report generator to generate PDF and PNG files.
+	 *
+	 * @when after_wp_load
+	 */
+	public function test_report() {
+		WP_CLI::line( 'Generating PDF and PNG Bot Audit Reports...' );
+		ATG_Report_Generator::generate_report_files();
+		$upload_dir = wp_upload_dir();
+		$pdf_path   = $upload_dir['basedir'] . '/bot-audit-report.pdf';
+		$png_path   = $upload_dir['basedir'] . '/bot-audit-report.png';
+
+		if ( file_exists( $pdf_path ) ) {
+			WP_CLI::success( 'PDF Report generated: ' . $pdf_path );
+		} else {
+			WP_CLI::error( 'Failed to generate PDF Report.' );
+		}
+
+		if ( file_exists( $png_path ) ) {
+			WP_CLI::success( 'PNG Report generated: ' . $png_path );
+		} else {
+			WP_CLI::error( 'Failed to generate PNG Report.' );
+		}
+	}
 }
 
 // Register commands.
@@ -259,4 +284,5 @@ if ( class_exists( 'WP_CLI' ) ) {
 	WP_CLI::add_command( 'atg preset',            array( 'ATG_CLI_Command', 'preset' ) );
 	WP_CLI::add_command( 'atg prune',             array( 'ATG_CLI_Command', 'prune' ) );
 	WP_CLI::add_command( 'atg env',               array( 'ATG_CLI_Command', 'env' ) );
+	WP_CLI::add_command( 'atg test-report',       array( 'ATG_CLI_Command', 'test_report' ) );
 }

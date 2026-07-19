@@ -50,6 +50,10 @@ class ATG_Allowlist {
 		$preset = get_option( 'atg_preset', '' );
 		if ( 'headless' === $preset ) {
 			$paths[] = '/wp-json/wp/v2/';
+			$custom_ns = get_option( 'atg_custom_rest_namespace', '' );
+			if ( $custom_ns ) {
+				$paths[] = '/wp-json/' . trim( $custom_ns, '/' ) . '/';
+			}
 		}
 		return apply_filters( 'atg_protected_paths', $paths );
 	}

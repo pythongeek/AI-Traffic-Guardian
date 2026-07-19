@@ -65,6 +65,9 @@ class ATG_Wizard {
 
 			update_option( 'atg_preset', $preset );
 			update_option( 'atg_cloudflare_detected', $cf );
+			if ( 'headless' === $preset && isset( $_POST['custom_namespace'] ) ) {
+				update_option( 'atg_custom_rest_namespace', sanitize_text_field( wp_unslash( $_POST['custom_namespace'] ) ) );
+			}
 			update_option( 'atg_onboarding_completed', true );
 
 			// Activate shadow mode for 7 days.
@@ -100,7 +103,22 @@ class ATG_Wizard {
 						<option value="private"><?php esc_html_e( 'Private / Membership (block all scraping)', 'ai-traffic-guardian' ); ?></option>
 						<option value="headless"><?php esc_html_e( 'Headless CMS (API-first backend)', 'ai-traffic-guardian' ); ?></option>
 					</select>
+					<div id="headless-namespace-field" style="margin-top: 10px; display: none;">
+						<label style="font-size: 13px; font-weight: 600; color: #475569; display: block; margin-bottom: 5px;"><?php esc_html_e( 'Custom REST Namespace (optional):', 'ai-traffic-guardian' ); ?></label>
+						<input type="text" name="custom_namespace" placeholder="e.g. my-api/v1" style="width: 100%; padding: 8px; border-radius: 4px; border: 1px solid #cbd5e1;" />
+					</div>
 				</div>
+				<script>
+				document.addEventListener('DOMContentLoaded', function() {
+					var select = document.querySelector('select[name="preset"]');
+					var field = document.getElementById('headless-namespace-field');
+					if (select && field) {
+						select.addEventListener('change', function() {
+							field.style.display = (this.value === 'headless') ? 'block' : 'none';
+						});
+					}
+				});
+				</script>
 
 				<!-- Step 2: Cloudflare Detection -->
 				<div style="margin-bottom: 25px;">

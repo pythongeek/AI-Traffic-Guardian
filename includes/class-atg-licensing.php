@@ -15,38 +15,126 @@ if ( ! defined( 'ABSPATH' ) ) {
 class ATG_Licensing {
 
 	/**
-	 * Check if the active license is valid Pro.
-	 *
-	 * @return bool True if active Pro.
+	 * Hook initialization.
 	 */
-	public static function is_pro() {
-		$license = get_option( 'atg_license_key', '' );
-		if ( empty( $license ) ) {
-			return false;
-		}
-
-		$cached = get_transient( 'atg_license_status' );
-		if ( false !== $cached ) {
-			return 'valid' === $cached;
-		}
-
-		// Mock verification for premium styling.
-		// If the key starts with "BSPRO-", treat it as valid.
-		$is_valid = ( 0 === strpos( $license, 'BSPRO-' ) );
-		set_transient( 'atg_license_status', $is_valid ? 'valid' : 'invalid', DAY_IN_SECONDS );
-
-		return $is_valid;
+	public static function init() {
+		add_action( 'atg_cron_daily', array( __CLASS__, 'daily_license_check' ) );
 	}
 
 	/**
-	 * Update the license key.
+	 * Check if the active license is valid Pro (with grace period support).
+	 *
+	 * @return bool True if active Pro or inside grace period.
+	 */
+	public static function is_pro() {
+		$license_data = get_option( 'atg_license_data', array() );
+
+		if ( empty( $license_data ) || ! isset( $license_data['license_key'] ) ) {
+			return false;
+		}
+
+		if ( 'active' === $license_data['status'] ) {
+			// Check expiration date.
+			if ( ! empty( $license_data['expires_at'] ) && time() > strtotime( $license_data['expires_at'] ) ) {
+				// Expired. Check if we are within the 14-day grace window.
+				$failed_at = isset( $license_data['failed_at'] ) ? (int) $license_data['failed_at'] : strtotime( $license_data['expires_at'] );
+				if ( ( time() - $failed_at ) <= 14 * DAY_IN_SECONDS ) {
+					return true; // Grace period active
+				}
+				return false;
+			}
+			return true;
+		}
+
+		// If status is failed/revoked, check grace period.
+		if ( isset( $license_data['failed_at'] ) && $license_data['failed_at'] > 0 ) {
+			if ( ( time() - (int) $license_data['failed_at'] ) <= 14 * DAY_IN_SECONDS ) {
+				return true;
+			}
+		}
+
+		return false;
+	}
+
+	/**
+	 * Single capability check function.
+	 *
+	 * @return bool
+	 */
+	public static function atg_is_pro() {
+		return self::is_pro();
+	}
+
+	/**
+	 * Perform the external license check.
+	 *
+	 * @param string $key License key.
+	 * @return array Check results.
+	 */
+	public static function verify_with_server( $key ) {
+		// In a production setup, this sends an wp_safe_remote_post request to the license server.
+		// For our implementation, we mock this check. Keys starting with "BSPRO-" are valid.
+		$is_valid = ( 0 === strpos( $key, 'BSPRO-' ) );
+
+		if ( $is_valid ) {
+			return array(
+				'license_key'  => $key,
+				'status'       => 'active',
+				'expires_at'   => gmdate( 'Y-m-d H:i:s', time() + 365 * DAY_IN_SECONDS ),
+				'last_checked' => gmdate( 'Y-m-d H:i:s' ),
+				'failed_at'    => 0,
+			);
+		} else {
+			return array(
+				'license_key'  => $key,
+				'status'       => 'expired',
+				'expires_at'   => gmdate( 'Y-m-d H:i:s', time() - DAY_IN_SECONDS ),
+				'last_checked' => gmdate( 'Y-m-d H:i:s' ),
+				'failed_at'    => time(),
+			);
+		}
+	}
+
+	/**
+	 * Update the license key and perform initial check.
 	 *
 	 * @param string $key License key.
 	 * @return bool Status.
 	 */
 	public static function update_license( $key ) {
-		update_option( 'atg_license_key', sanitize_text_field( trim( $key ) ) );
-		delete_transient( 'atg_license_status' );
-		return self::is_pro();
+		$key = sanitize_text_field( trim( $key ) );
+		if ( empty( $key ) ) {
+			delete_option( 'atg_license_data' );
+			return false;
+		}
+
+		$data = self::verify_with_server( $key );
+		update_option( 'atg_license_data', $data );
+
+		return 'active' === $data['status'];
+	}
+
+	/**
+	 * Daily license check handler.
+	 */
+	public static function daily_license_check() {
+		$license_data = get_option( 'atg_license_data', array() );
+		if ( empty( $license_data ) || ! isset( $license_data['license_key'] ) ) {
+			return;
+		}
+
+		// Perform remote check
+		$new_data = self::verify_with_server( $license_data['license_key'] );
+
+		// If it failed due to a network error, preserve the old status but record the fail time if not already set.
+		if ( 'active' !== $new_data['status'] ) {
+			if ( empty( $license_data['failed_at'] ) ) {
+				$license_data['failed_at'] = time();
+			}
+			$license_data['last_checked'] = gmdate( 'Y-m-d H:i:s' );
+			update_option( 'atg_license_data', $license_data );
+		} else {
+			update_option( 'atg_license_data', $new_data );
+		}
 	}
 }

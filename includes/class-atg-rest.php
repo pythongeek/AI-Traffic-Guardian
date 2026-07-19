@@ -203,6 +203,18 @@ class ATG_REST {
 			'permission_callback' => '__return_true',
 			'callback'            => array( __CLASS__, 'get_snapshot' ),
 		) );
+
+		register_rest_route( self::NS, '/report/download', array(
+			'methods'             => 'GET',
+			'permission_callback' => array( __CLASS__, 'can_manage' ),
+			'callback'            => array( __CLASS__, 'download_report' ),
+		) );
+
+		register_rest_route( self::NS, '/dashboard/view', array(
+			'methods'             => 'POST',
+			'permission_callback' => array( __CLASS__, 'can_view_reports' ),
+			'callback'            => array( __CLASS__, 'save_dashboard_view' ),
+		) );
 	}
 
 	/**
@@ -874,5 +886,60 @@ class ATG_REST {
 
 		$snapshot = ATG_Edge::generate_snapshot();
 		return new WP_REST_Response( $snapshot, 200 );
+	}
+
+	/**
+	 * Download Bot Audit Report files (PDF / PNG).
+	 *
+	 * @param WP_REST_Request $req REST Request.
+	 * @return WP_Error|void
+	 */
+	public static function download_report( WP_REST_Request $req ) {
+		$type = sanitize_key( $req->get_param( 'type' ) );
+		$upload_dir = wp_upload_dir();
+
+		if ( 'png' === $type ) {
+			$file = $upload_dir['basedir'] . '/bot-audit-report.png';
+			if ( ! file_exists( $file ) ) {
+				ATG_Report_Generator::generate_report_files();
+			}
+			if ( file_exists( $file ) ) {
+				header( 'Content-Type: image/png' );
+				header( 'Content-Disposition: attachment; filename="bot-audit-report.png"' );
+				readfile( $file );
+				exit;
+			}
+		} else {
+			$file = $upload_dir['basedir'] . '/bot-audit-report.pdf';
+			if ( ! file_exists( $file ) ) {
+				ATG_Report_Generator::generate_report_files();
+			}
+			if ( file_exists( $file ) ) {
+				header( 'Content-Type: application/pdf' );
+				header( 'Content-Disposition: attachment; filename="bot-audit-report.pdf"' );
+				readfile( $file );
+				exit;
+			}
+		}
+
+		return new WP_Error( 'file_not_found', __( 'Report file not found.', 'ai-traffic-guardian' ), array( 'status' => 404 ) );
+	}
+
+	/**
+	 * Save current user's dashboard view preference.
+	 *
+	 * @param WP_REST_Request $req REST Request.
+	 * @return WP_REST_Response
+	 */
+	public static function save_dashboard_view( WP_REST_Request $req ) {
+		$view    = sanitize_key( $req->get_param( 'view' ) );
+		$user_id = get_current_user_id();
+
+		if ( $user_id && in_array( $view, array( 'simple', 'advanced' ), true ) ) {
+			update_user_meta( $user_id, 'atg_dashboard_view', $view );
+			return new WP_REST_Response( array( 'ok' => true, 'view' => $view ), 200 );
+		}
+
+		return new WP_REST_Response( array( 'ok' => false ), 400 );
 	}
 }

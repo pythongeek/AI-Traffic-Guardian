@@ -35,6 +35,19 @@ class ATG_Alerts {
 		if ( ! $plugin->get( 'alert_new_bot', true ) ) {
 			return;
 		}
+		if ( ! ATG_Licensing::atg_is_pro() ) {
+			$first_of_month = gmdate( 'Y-m-01 00:00:00' );
+			$count = (int) $wpdb->get_var(
+				$wpdb->prepare(
+					"SELECT COUNT(*) FROM %i WHERE created >= %s",
+					ATG_DB::table( 'alerts' ),
+					$first_of_month
+				)
+			);
+			if ( $count >= 20 ) {
+				return;
+			}
+		}
 		$ua  = isset( $payload['ua'] ) ? (string) $payload['ua'] : '';
 		$key = 'atg_alert_' . md5( $type . '|' . $ua );
 		if ( get_transient( $key ) ) {

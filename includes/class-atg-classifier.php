@@ -166,6 +166,25 @@ class ATG_Classifier {
 		// 3. Immutable endpoint allowlist (payment webhooks, Woo API…).
 		$path_hit = $plugin->allowlist->path_match( $path );
 		if ( $path_hit ) {
+			$preset = get_option( 'atg_preset', '' );
+			$custom_ns = get_option( 'atg_custom_rest_namespace', '' );
+			$is_headless_rest = false;
+			if ( 'headless' === $preset ) {
+				if ( false !== strpos( $path_hit, '/wp-json/wp/v2/' ) ) {
+					$is_headless_rest = true;
+				} elseif ( $custom_ns && false !== strpos( $path_hit, '/wp-json/' . trim( $custom_ns, '/' ) . '/' ) ) {
+					$is_headless_rest = true;
+				}
+			}
+
+			if ( $is_headless_rest ) {
+				return array_merge( $base, array(
+					'classification' => 'headless_rest',
+					'action'         => 'throttle',
+					'reason'         => 'Headless CMS REST endpoint: ' . $path_hit,
+				) );
+			}
+
 			return array_merge( $base, array(
 				'classification' => 'allowlisted',
 				'action'         => 'allow',

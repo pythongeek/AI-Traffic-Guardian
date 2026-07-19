@@ -45,6 +45,7 @@ class ATG_Admin {
 		add_filter( 'plugin_action_links_' . ATG_PLUGIN_BASENAME, array( $this, 'action_links' ) );
 		add_filter( 'plugin_row_meta', array( $this, 'row_meta' ), 10, 2 );
 		add_action( 'admin_notices', array( $this, 'conflict_notices' ) );
+		add_action( 'admin_notices', array( $this, 'show_shadow_report_notice' ) );
 	}
 
 	/**
@@ -54,9 +55,10 @@ class ATG_Admin {
 		$alerts = ATG_Plugin::instance()->alerts->open_count();
 		$badge  = $alerts ? ' <span class="awaiting-mod">' . (int) $alerts . '</span>' : '';
 
-		$page_title = defined( 'ATG_BRAND_NAME' ) ? ATG_BRAND_NAME : __( 'AI Traffic Guardian', 'ai-traffic-guardian' );
-		$menu_title = defined( 'ATG_BRAND_NAME' ) ? ATG_BRAND_NAME : __( 'Traffic Guardian', 'ai-traffic-guardian' );
-		$icon       = defined( 'ATG_BRAND_ICON' ) ? ATG_BRAND_ICON : 'dashicons-shield-alt';
+		$is_pro     = ATG_Licensing::atg_is_pro();
+		$page_title = ( $is_pro && defined( 'ATG_BRAND_NAME' ) ) ? ATG_BRAND_NAME : __( 'AI Traffic Guardian', 'ai-traffic-guardian' );
+		$menu_title = ( $is_pro && defined( 'ATG_BRAND_NAME' ) ) ? ATG_BRAND_NAME : __( 'Traffic Guardian', 'ai-traffic-guardian' );
+		$icon       = ( $is_pro && defined( 'ATG_BRAND_ICON' ) ) ? ATG_BRAND_ICON : 'dashicons-shield-alt';
 
 		add_menu_page(
 			$page_title,
@@ -93,10 +95,11 @@ class ATG_Admin {
 
 		// Inject inline branding color overrides when config/branding.php defines them.
 		$overrides = '';
-		if ( defined( 'ATG_BRAND_COLOR_PRIMARY' ) ) {
+		$is_pro    = ATG_Licensing::atg_is_pro();
+		if ( $is_pro && defined( 'ATG_BRAND_COLOR_PRIMARY' ) ) {
 			$overrides .= '--atg-brand:' . esc_attr( ATG_BRAND_COLOR_PRIMARY ) . ';';
 		}
-		if ( defined( 'ATG_BRAND_COLOR_DARK' ) ) {
+		if ( $is_pro && defined( 'ATG_BRAND_COLOR_DARK' ) ) {
 			$overrides .= '--atg-topbar-start:' . esc_attr( ATG_BRAND_COLOR_DARK ) . ';';
 		}
 		if ( $overrides ) {
@@ -140,7 +143,8 @@ class ATG_Admin {
 		if ( file_exists( $file ) ) {
 			include $file;
 		}
-		if ( ! defined( 'ATG_BRAND_HIDE_CREDITS' ) || ! ATG_BRAND_HIDE_CREDITS ) {
+		$is_pro = ATG_Licensing::atg_is_pro();
+		if ( ! $is_pro || ! defined( 'ATG_BRAND_HIDE_CREDITS' ) || ! ATG_BRAND_HIDE_CREDITS ) {
 			echo '<p class="atg-footer-credit">' . esc_html__( 'Powered by AI Traffic Guardian', 'ai-traffic-guardian' ) . '</p>';
 		}
 		do_action( 'atg_dashboard_footer' );
@@ -155,9 +159,10 @@ class ATG_Admin {
 	private function render_topbar( $slug ) {
 		$plugin     = ATG_Plugin::instance();
 		$mode       = $plugin->enforcement_mode();
-		$brand_name = defined( 'ATG_BRAND_NAME' ) ? ATG_BRAND_NAME : __( 'AI Traffic Guardian', 'ai-traffic-guardian' );
-		$logo_url   = defined( 'ATG_BRAND_LOGO_URL' ) ? ATG_BRAND_LOGO_URL : '';
-		$icon_class = defined( 'ATG_BRAND_ICON' ) ? ATG_BRAND_ICON : 'dashicons-shield-alt';
+		$is_pro     = ATG_Licensing::atg_is_pro();
+		$brand_name = ( $is_pro && defined( 'ATG_BRAND_NAME' ) ) ? ATG_BRAND_NAME : __( 'AI Traffic Guardian', 'ai-traffic-guardian' );
+		$logo_url   = ( $is_pro && defined( 'ATG_BRAND_LOGO_URL' ) ) ? ATG_BRAND_LOGO_URL : '';
+		$icon_class = ( $is_pro && defined( 'ATG_BRAND_ICON' ) ) ? ATG_BRAND_ICON : 'dashicons-shield-alt';
 		$labels     = array(
 			'shadow' => __( 'Shadow mode — observing only', 'ai-traffic-guardian' ),
 			'active' => __( 'Active enforcement', 'ai-traffic-guardian' ),
@@ -217,10 +222,11 @@ class ATG_Admin {
 		if ( strpos( $file, 'ai-traffic-guardian.php' ) === false ) {
 			return $links;
 		}
-		if ( defined( 'ATG_BRAND_SUPPORT_URL' ) && ATG_BRAND_SUPPORT_URL ) {
+		$is_pro = ATG_Licensing::atg_is_pro();
+		if ( $is_pro && defined( 'ATG_BRAND_SUPPORT_URL' ) && ATG_BRAND_SUPPORT_URL ) {
 			$links[] = '<a href="' . esc_url( ATG_BRAND_SUPPORT_URL ) . '">' . esc_html__( 'Support', 'ai-traffic-guardian' ) . '</a>';
 		}
-		if ( defined( 'ATG_BRAND_DOCS_URL' ) && ATG_BRAND_DOCS_URL ) {
+		if ( $is_pro && defined( 'ATG_BRAND_DOCS_URL' ) && ATG_BRAND_DOCS_URL ) {
 			$links[] = '<a href="' . esc_url( ATG_BRAND_DOCS_URL ) . '">' . esc_html__( 'Documentation', 'ai-traffic-guardian' ) . '</a>';
 		}
 		return $links;
@@ -389,7 +395,8 @@ class ATG_Admin {
 				$remediation = $conflict['issue'] . ' — ' . $conflict['remediation'];
 			}
 
-			$brand_name  = defined( 'ATG_BRAND_NAME' ) ? ATG_BRAND_NAME : __( 'AI Traffic Guardian', 'ai-traffic-guardian' );
+			$is_pro      = ATG_Licensing::atg_is_pro();
+			$brand_name  = ( $is_pro && defined( 'ATG_BRAND_NAME' ) ) ? ATG_BRAND_NAME : __( 'AI Traffic Guardian', 'ai-traffic-guardian' );
 			$dismiss_url = wp_nonce_url( add_query_arg( 'atg_dismiss_conflict', $plugin_name ), 'atg_dismiss_conflict' );
 
 			echo '<div class="notice notice-warning is-dismissible" style="position:relative;">';
@@ -399,6 +406,21 @@ class ATG_Admin {
 				echo '<p>' . esc_html( $remediation ) . '</p>';
 			}
 			echo '<p><a href="' . esc_url( $dismiss_url ) . '">' . esc_html__( 'Dismiss this warning', 'ai-traffic-guardian' ) . '</a></p>';
+			echo '</div>';
+		}
+	}
+
+	/**
+	 * Render 7-day shadow report completion notice banner.
+	 */
+	public function show_shadow_report_notice() {
+		if ( ! current_user_can( 'manage_options' ) ) {
+			return;
+		}
+		if ( get_option( 'atg_shadow_report_ready' ) ) {
+			$report_url = admin_url( 'admin.php?page=atg-report' );
+			echo '<div class="notice notice-info is-dismissible">';
+			echo '<p><strong>' . esc_html__( 'Your 7-Day Bot Audit Report is ready!', 'ai-traffic-guardian' ) . '</strong> ' . sprintf( /* translators: %s link */ esc_html__( 'Analyze AI crawler overhead, bandwidth waste, and traffic composition in your %s.', 'ai-traffic-guardian' ), '<a href="' . esc_url( $report_url ) . '">' . esc_html__( 'Bot Audit Report', 'ai-traffic-guardian' ) . '</a>' ) . '</p>';
 			echo '</div>';
 		}
 	}
