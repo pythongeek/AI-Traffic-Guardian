@@ -82,9 +82,9 @@ class ATG_Activator {
 		if ( $wp_rewrite instanceof WP_Rewrite ) {
 			ATG_Llms::register_rewrite();
 			if ( did_action( 'init' ) > 0 ) {
-				flush_rewrite_rules();
+				flush_rewrite_rules( false );
 			} else {
-				add_action( 'shutdown', 'flush_rewrite_rules' );
+				add_action( 'shutdown', function() { flush_rewrite_rules( false ); } );
 			}
 		}
 	}

@@ -20,6 +20,6 @@ class ATG_Deactivator {
 	public static function deactivate() {
 		wp_clear_scheduled_hook( 'atg_cron_daily' );
 		wp_clear_scheduled_hook( 'atg_cron_weekly' );
-		flush_rewrite_rules();
+		flush_rewrite_rules( false );
 	}
 }

@@ -620,7 +620,7 @@ class ATG_REST {
 		if ( isset( $clean['llms_enabled'] ) ) {
 			if ( did_action( 'init' ) ) {
 				ATG_Llms::register_rewrite();
-				add_action( 'shutdown', 'flush_rewrite_rules' );
+				add_action( 'shutdown', function() { flush_rewrite_rules( false ); } );
 			}
 		}
 
