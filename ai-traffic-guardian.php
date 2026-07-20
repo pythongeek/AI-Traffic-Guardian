@@ -73,6 +73,23 @@ if ( ! function_exists( 'atg_debug_exception_handler' ) ) {
 	set_exception_handler( 'atg_debug_exception_handler' );
 }
 
+if ( ! function_exists( 'atg_debug_shutdown_handler' ) ) {
+	function atg_debug_shutdown_handler() {
+		$error = error_get_last();
+		if ( $error && in_array( $error['type'], array( E_ERROR, E_CORE_ERROR, E_COMPILE_ERROR, E_USER_ERROR ), true ) ) {
+			atg_write_debug_log( "PHP FATAL ERROR: {$error['message']} in {$error['file']} on line {$error['line']}" );
+		}
+	}
+	register_shutdown_function( 'atg_debug_shutdown_handler' );
+}
+
+add_filter( 'rest_request_after_callbacks', function( $response, $handler, $request ) {
+	if ( is_wp_error( $response ) ) {
+		atg_write_debug_log( "REST API Error on " . $request->get_route() . " (" . $request->get_method() . "): " . $response->get_error_message() . " (Code: " . $response->get_error_code() . ")" );
+	}
+	return $response;
+}, 10, 3 );
+
 // Register closure-based autoloader to prevent prefix/version redefinition conflicts
 spl_autoload_register( function ( $class ) {
 	if ( strpos( $class, 'ATG_' ) !== 0 ) {

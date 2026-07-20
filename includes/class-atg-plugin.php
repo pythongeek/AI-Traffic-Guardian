@@ -262,7 +262,7 @@ final class ATG_Plugin {
 	 * @return string shadow|active|off
 	 */
 	public function enforcement_mode() {
-		if ( $this->get( 'staging_mode', false ) || ( defined( 'WP_ENV' ) && 'staging' === WP_ENV ) || ( defined( 'WP_DEBUG' ) && WP_DEBUG ) ) {
+		if ( $this->get( 'staging_mode', false ) || ( defined( 'WP_ENV' ) && 'staging' === WP_ENV ) ) {
 			return 'shadow';
 		}
 		// Shadow stays shadow after the grace period until the admin promotes
