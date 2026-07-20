@@ -147,10 +147,16 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 	<div class="atg-card atg-danger-zone">
 		<div class="atg-card-head"><h2><?php esc_html_e( 'Data management', 'ai-traffic-guardian' ); ?></h2></div>
-		<label class="atg-switch-row">
+		<label class="atg-switch-row" style="margin-bottom:15px;">
 			<input type="checkbox" data-setting="delete_data_on_uninstall" />
 			<span><?php esc_html_e( 'Delete all tables and settings when the plugin is uninstalled', 'ai-traffic-guardian' ); ?></span>
 		</label>
+		<div style="border-top:1px solid #fee2e2; padding-top:15px; margin-top:15px;">
+			<button type="button" class="button" id="atg-clear-traffic-data-btn" style="background:#ef4444; border-color:#ef4444; color:#fff;" onmouseover="this.style.background='#dc2626'" onmouseout="this.style.background='#ef4444'">
+				<?php esc_html_e( 'Clear All Traffic Logs & Stats', 'ai-traffic-guardian' ); ?>
+			</button>
+			<p class="description" style="margin-top:5px; color:#ef4444;"><?php esc_html_e( 'Warning: This will delete all rows from the traffic log and daily statistics tables. The dashboard stats and charts will start fresh from zero.', 'ai-traffic-guardian' ); ?></p>
+		</div>
 	</div>
 
 	<p><button class="button button-primary button-hero" data-atg-save-settings><?php esc_html_e( 'Save settings', 'ai-traffic-guardian' ); ?></button></p>

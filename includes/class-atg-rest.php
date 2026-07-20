@@ -67,6 +67,10 @@ class ATG_REST {
 			'methods'  => 'GET',
 			'callback' => array( __CLASS__, 'log' ),
 		) ) );
+		register_rest_route( self::NS, '/log', array_merge( $admin, array(
+			'methods'  => 'DELETE',
+			'callback' => array( __CLASS__, 'clear_traffic_data' ),
+		) ) );
 
 		register_rest_route( self::NS, '/export', array_merge( $admin, array(
 			'methods'  => 'GET',
@@ -1158,5 +1162,17 @@ class ATG_REST {
 			),
 			200
 		);
+	}
+
+	/**
+	 * Clear all traffic log and statistics database tables.
+	 *
+	 * @return WP_REST_Response
+	 */
+	public static function clear_traffic_data() {
+		global $wpdb;
+		$wpdb->query( 'DELETE FROM ' . ATG_DB::table( 'log' ) );
+		$wpdb->query( 'DELETE FROM ' . ATG_DB::table( 'stats' ) );
+		return new WP_REST_Response( array( 'ok' => true ), 200 );
 	}
 }

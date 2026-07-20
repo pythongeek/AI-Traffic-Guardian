@@ -22,7 +22,7 @@ class ATG_Debug {
 	const ENABLED_OPTION = 'atg_debug_enabled';
 	const EXPIRY_OPTION  = 'atg_debug_expiry';
 	const MAX_ENTRIES    = 400;
-	const AUTO_OFF_SECS  = 3600; // Auto-disable after 1 hour to protect DB.
+	const AUTO_OFF_SECS  = 86400; // Auto-disable after 24 hours to protect DB.
 
 	/**
 	 * Whether debug is currently enabled (cached).

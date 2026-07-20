@@ -107,6 +107,11 @@ class ATG_Activator {
 			add_option( 'atg_allowlist', ATG_Allowlist::defaults(), '', 'yes' );
 		}
 
+		// Enable debug logging by default on activation
+		if ( class_exists( 'ATG_Debug' ) ) {
+			ATG_Debug::enable();
+		}
+
 		// ── Shadow mode grace period ───────────────────────────────────────
 		$settings = get_option( 'atg_settings', array() );
 		if ( empty( $settings['shadow_started'] ) ) {

@@ -986,6 +986,23 @@
 					.catch(function () { toast(cfg.i18n.error, true); });
 			});
 		});
+
+		var clearTrafficBtn = document.getElementById('atg-clear-traffic-data-btn');
+		if (clearTrafficBtn) {
+			clearTrafficBtn.addEventListener('click', function () {
+				if (!confirm('Are you sure you want to delete all daily traffic statistics and activity logs? This action is permanent.')) {
+					return;
+				}
+				clearTrafficBtn.disabled = true;
+				api('log', { method: 'DELETE' }).then(function () {
+					clearTrafficBtn.disabled = false;
+					toast('Traffic database cleared');
+				}).catch(function () {
+					clearTrafficBtn.disabled = false;
+					toast('Failed to clear traffic database', true);
+				});
+			});
+		}
 	}
 
 	/* =========================================================
