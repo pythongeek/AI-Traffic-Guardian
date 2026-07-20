@@ -66,7 +66,7 @@ class ATG_Alerts {
 			array( '%s', '%s', '%s', '%s', '%s' )
 		);
 
-		$is_staging = $plugin->get( 'staging_mode', false ) || ( defined( 'WP_ENV' ) && 'staging' === WP_ENV ) || ( defined( 'WP_DEBUG' ) && WP_DEBUG );
+		$is_staging = $plugin->get( 'staging_mode', false ) || ( defined( 'WP_ENV' ) && 'staging' === WP_ENV );
 		if ( $plugin->get( 'alert_email', false ) && ! $is_staging ) {
 			$to      = get_option( 'admin_email' );
 			$subject = sprintf( /* translators: %s alert title */ __( '[Bot Shield Pro] %s', 'ai-traffic-guardian' ), $title );

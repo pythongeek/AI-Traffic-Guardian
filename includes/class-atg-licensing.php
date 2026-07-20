@@ -68,12 +68,20 @@ class ATG_Licensing {
 	/**
 	 * Perform the external license check.
 	 *
+	 * TODO: PLACEHOLDER — Replace this mock with a real license server API call.
+	 * Currently, any key starting with "BSPRO-" is accepted as a valid Pro
+	 * license. When a real license server is available, replace the body of
+	 * this method with a wp_safe_remote_post() call to your API endpoint.
+	 *
 	 * @param string $key License key.
 	 * @return array Check results.
 	 */
 	public static function verify_with_server( $key ) {
-		// In a production setup, this sends an wp_safe_remote_post request to the license server.
-		// For our implementation, we mock this check. Keys starting with "BSPRO-" are valid.
+		// ──────────────────────────────────────────────────────────────
+		// PLACEHOLDER: Local-only license validation.
+		// Replace with: wp_safe_remote_post( 'https://your-license-server.com/verify', ... )
+		// when a real license API is available.
+		// ──────────────────────────────────────────────────────────────
 		$is_valid = ( 0 === strpos( $key, 'BSPRO-' ) );
 
 		if ( $is_valid ) {

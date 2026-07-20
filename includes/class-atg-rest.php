@@ -970,15 +970,14 @@ class ATG_REST {
 		$res = wp_safe_remote_get( $url, array( 'timeout' => 5 ) );
 
 		if ( is_wp_error( $res ) ) {
-			// Mock campaign response for testing / fallback so the button still works locally
-			$mock = array(
-				'campaign_id' => 'shadow-mode-2026-08',
-				'opens_at'    => gmdate( 'Y-m-d H:i:s', time() - 3600 ),
-				'closes_at'   => gmdate( 'Y-m-d H:i:s', time() + 7 * DAY_IN_SECONDS ),
-				'prize'       => '1-year free license of Bot Shield Pro',
+			// Campaign server unreachable — return empty state so UI shows "no active campaign".
+			$unavailable = array(
+				'campaign_id' => null,
+				'unavailable' => true,
+				'message'     => __( 'Campaign service is currently unavailable. Please try again later.', 'ai-traffic-guardian' ),
 			);
-			set_transient( 'atg_active_campaign', $mock, HOUR_IN_SECONDS ); // cache mock less time
-			return new WP_REST_Response( $mock, 200 );
+			set_transient( 'atg_active_campaign', $unavailable, 15 * MINUTE_IN_SECONDS );
+			return new WP_REST_Response( $unavailable, 200 );
 		}
 
 		$body = wp_remote_retrieve_body( $res );
@@ -1054,15 +1053,11 @@ class ATG_REST {
 		) );
 
 		if ( is_wp_error( $res ) ) {
-			// Mock submission callback response for local testing
-			$mock_rank = rand( 5, 20 );
-			$mock_total = rand( 50, 100 );
-			return new WP_REST_Response( array(
-				'accepted'      => true,
-				'current_rank'  => $mock_rank,
-				'total_entries' => $mock_total,
-				'is_mock'       => true,
-			), 200 );
+			return new WP_Error(
+				'submission_failed',
+				__( 'Could not reach the campaign server. Please check your internet connection and try again.', 'ai-traffic-guardian' ),
+				array( 'status' => 503 )
+			);
 		}
 
 		$body = wp_remote_retrieve_body( $res );

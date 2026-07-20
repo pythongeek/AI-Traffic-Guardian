@@ -43,23 +43,10 @@ $nginx   = ATG_Edge::generate_nginx_map();
 			
 			<textarea readonly style="width: 100%; height: 250px; font-family: monospace; font-size: 12px; background: #fafafa; border: 1px solid #ddd; padding: 10px; margin-top: 10px;"><?php echo esc_textarea( $worker ); ?></textarea>
 
-			<h3 style="margin-top: 30px;"><?php esc_html_e( 'Auto-deploy via Cloudflare API', 'ai-traffic-guardian' ); ?></h3>
-			<table class="form-table">
-				<tr>
-					<th><label for="atg_cf_api_token"><?php esc_html_e( 'Cloudflare API Token', 'ai-traffic-guardian' ); ?></label></th>
-					<td>
-						<input type="password" id="atg_cf_api_token" class="regular-text" placeholder="Enter Token" />
-					</td>
-				</tr>
-				<tr>
-					<th><label for="atg_cf_kv_ns"><?php esc_html_e( 'KV Namespace ID', 'ai-traffic-guardian' ); ?></label></th>
-					<td>
-						<input type="text" id="atg_cf_kv_ns" class="regular-text" placeholder="e.g. 524fa9..." />
-					</td>
-				</tr>
-			</table>
-			<button type="button" class="button button-primary" id="atg-deploy-worker-btn" style="margin-top: 10px;">
-				<?php esc_html_e( 'Deploy Worker & Push KV Policy', 'ai-traffic-guardian' ); ?>
+			<h3 style="margin-top: 30px;"><?php esc_html_e( 'Deployment', 'ai-traffic-guardian' ); ?></h3>
+			<p class="description"><?php esc_html_e( 'Copy the worker script above and paste it into a new Cloudflare Worker via the Cloudflare dashboard. Then add the KV namespace binding and your site credentials as environment variables.', 'ai-traffic-guardian' ); ?></p>
+			<button type="button" class="button button-secondary" onclick="navigator.clipboard.writeText(this.closest('.edge-tab-content').querySelector('textarea').value).then(function(){alert('Worker script copied to clipboard.')})">
+				<?php esc_html_e( 'Copy Worker Script', 'ai-traffic-guardian' ); ?>
 			</button>
 		</div>
 
