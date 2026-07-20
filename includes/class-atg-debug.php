@@ -104,6 +104,7 @@ class ATG_Debug {
 
 		$backtrace = debug_backtrace( DEBUG_BACKTRACE_IGNORE_ARGS, 3 ); // phpcs:ignore WordPress.PHP.DevelopmentFunctions
 		$caller    = isset( $backtrace[1] ) ? ( $backtrace[1]['class'] ?? '' ) . '::' . ( $backtrace[1]['function'] ?? '' ) : '';
+		$data_str  = is_string( $data ) ? $data : wp_json_encode( $data, JSON_UNESCAPED_SLASHES | JSON_PRETTY_PRINT );
 
 		self::$buffer[] = array(
 			'ts'      => current_time( 'mysql' ),
@@ -111,8 +112,17 @@ class ATG_Debug {
 			'context' => sanitize_key( $context ),
 			'message' => (string) $message,
 			'caller'  => $caller,
-			'data'    => is_string( $data ) ? $data : wp_json_encode( $data, JSON_UNESCAPED_SLASHES | JSON_PRETTY_PRINT ),
+			'data'    => $data_str,
 		);
+
+		// Also write to the physical file-based log on the server if the helper exists
+		if ( function_exists( 'atg_write_debug_log' ) ) {
+			$log_msg = "[CONTEXT: {$context}] {$message} (Caller: {$caller})";
+			if ( $data_str && '[]' !== $data_str && '{}' !== $data_str ) {
+				$log_msg .= "\nData: " . $data_str;
+			}
+			atg_write_debug_log( $log_msg );
+		}
 	}
 
 	/**
@@ -192,6 +202,10 @@ class ATG_Debug {
 	public static function clear() {
 		update_option( self::LOG_OPTION, array(), 'no' );
 		self::$buffer = array();
+		$log_file = dirname( dirname( __FILE__ ) ) . '/debug-log.txt';
+		if ( file_exists( $log_file ) ) {
+			@unlink( $log_file );
+		}
 		self::log( 'system', 'Log cleared by ' . wp_get_current_user()->user_login );
 	}
 
