@@ -333,11 +333,18 @@ $option_keys = array(
 	'atg_custom_rest_namespace',
 	'atg_allowlist',
 	'atg_custom_signatures',
-	'atg_license_status',
+	'atg_license_data',
 );
 
 foreach ( $option_keys as $key ) {
 	$original_options[ $key ] = get_option( $key );
+}
+
+// Temporarily clear user login scope so classifier and gates don't automatically trust current admin session
+$old_user_id = 0;
+if ( function_exists( 'wp_set_current_user' ) && function_exists( 'get_current_user_id' ) ) {
+	$old_user_id = get_current_user_id();
+	wp_set_current_user( 0 );
 }
 
 try {
@@ -475,19 +482,20 @@ try {
 	$res1 = $limiter->check( $decision, 'human' );
 	$res2 = $limiter->check( $decision, 'human' );
 	$res3 = $limiter->check( $decision, 'human' );
+	$res4 = $limiter->check( $decision, 'human' );
 
 	assert_test(
 		'Rate Limiter: First hits within limit are allowed',
-		'allow' === $res1['action'] && 'allow' === $res2['action'],
-		'action: allow, action: allow',
-		"action: {$res1['action']}, action: {$res2['action']}",
+		'allow' === $res1['action'] && 'allow' === $res2['action'] && 'allow' === $res3['action'],
+		'action: allow, action: allow, action: allow',
+		"action: {$res1['action']}, action: {$res2['action']}, action: {$res3['action']}",
 		'Initial requests under the thresholds must proceed uninterrupted.'
 	);
 	assert_test(
 		'Rate Limiter: Exceeding limit triggers throttle',
-		'throttle' === $res3['action'],
+		'throttle' === $res4['action'],
 		'action: throttle',
-		"action: {$res3['action']}",
+		"action: {$res4['action']}",
 		'Excessive request counts should trigger progressive throttling.'
 	);
 
@@ -496,13 +504,6 @@ try {
 
 	$session = isset( $_COOKIE['atg_sid'] ) ? sanitize_text_field( wp_unslash( $_COOKIE['atg_sid'] ) ) : 'none';
 	$token = hash_hmac( 'sha256', 'form|' . $session, wp_salt( 'nonce' ) );
-
-	// Temporarily clear user login scope so Form Guard doesn't automatically trust current admin session
-	$old_user_id = 0;
-	if ( function_exists( 'wp_set_current_user' ) && function_exists( 'get_current_user_id' ) ) {
-		$old_user_id = get_current_user_id();
-		wp_set_current_user( 0 );
-	}
 
 	$_POST['atg_hp'] = '';
 	$_POST['atg_tok'] = $token;
@@ -528,13 +529,8 @@ try {
 		'Submissions with populated honeypot fields must be blocked as spam.'
 	);
 
-	// Restore user session if applicable
-	if ( $old_user_id > 0 && function_exists( 'wp_set_current_user' ) ) {
-		wp_set_current_user( $old_user_id );
-	}
-
 	// Test Suite 5: Licensing
-	set_test_option( 'atg_license_status', '' );
+	set_test_option( 'atg_license_data', array() );
 	assert_test(
 		'Licensing: Default state is inactive/free',
 		! ATG_Licensing::atg_is_pro(),
@@ -543,7 +539,11 @@ try {
 		'Default licensing check should show false / free tier status.'
 	);
 
-	set_test_option( 'atg_license_status', 'active' );
+	set_test_option( 'atg_license_data', array(
+		'license_key' => 'BSPRO-MOCK-KEY',
+		'status'      => 'active',
+		'expires_at'  => gmdate( 'Y-m-d H:i:s', time() + 365 * DAY_IN_SECONDS )
+	) );
 	assert_test(
 		'Licensing: Active state returns pro status',
 		ATG_Licensing::atg_is_pro(),
@@ -581,7 +581,12 @@ try {
 			update_option( $key, $val );
 		}
 	}
-	
+
+	// Restore user session if applicable
+	if ( $old_user_id > 0 && function_exists( 'wp_set_current_user' ) ) {
+		wp_set_current_user( $old_user_id );
+	}
+
 	// Clean up verifier mock transient
 	delete_transient( $cache_key );
 }
