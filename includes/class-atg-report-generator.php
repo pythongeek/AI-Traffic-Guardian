@@ -120,6 +120,7 @@ class ATG_Report_Generator {
 			'vendors'           => $vendors,
 			'bandwidth_mb'      => $bandwidth_mb,
 			'headline_stat'     => $headline,
+			'standout'          => $headline,
 		);
 	}
 
