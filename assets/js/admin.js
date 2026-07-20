@@ -1349,7 +1349,15 @@
 	}
 
 	/* ---------------- Router ---------------- */
-	document.addEventListener('DOMContentLoaded', function () {
+	function ready(fn) {
+		if (document.readyState !== 'loading') {
+			fn();
+		} else {
+			document.addEventListener('DOMContentLoaded', fn);
+		}
+	}
+
+	ready(function () {
 		switch (page) {
 			case 'atg-dashboard': initDashboard(); break;
 			case 'atg-policy': initPolicy(); break;
