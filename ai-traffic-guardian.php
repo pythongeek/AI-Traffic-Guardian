@@ -46,25 +46,50 @@ if ( ! defined( 'ATG_PLUGIN_BASENAME' ) ) {
  *
  * @param string $class Fully-qualified class name.
  */
-if ( ! function_exists( 'atg_autoload' ) ) {
-	function atg_autoload( $class ) {
-		if ( strpos( $class, 'ATG_' ) !== 0 ) {
+// Register a custom error and exception log handler for debugging
+if ( ! function_exists( 'atg_write_debug_log' ) ) {
+	function atg_write_debug_log( $message ) {
+		$log_file = dirname( __FILE__ ) . '/debug-log.txt';
+		$time = date( 'Y-m-d H:i:s' );
+		@file_put_contents( $log_file, "[{$time}] {$message}\n", FILE_APPEND );
+	}
+}
+
+if ( ! function_exists( 'atg_debug_error_handler' ) ) {
+	function atg_debug_error_handler( $errno, $errstr, $errfile, $errline ) {
+		// Log errors excluding deprecations to keep logs clean unless they are critical
+		if ( ! ( $errno & ( E_DEPRECATED | E_USER_DEPRECATED ) ) ) {
+			atg_write_debug_log( "PHP ERROR (Type: {$errno}): {$errstr} in {$errfile} on line {$errline}" );
+		}
+		return false; // Let standard error handler run too
+	}
+	set_error_handler( 'atg_debug_error_handler' );
+}
+
+if ( ! function_exists( 'atg_debug_exception_handler' ) ) {
+	function atg_debug_exception_handler( $exception ) {
+		atg_write_debug_log( "PHP EXCEPTION: " . $exception->getMessage() . " in " . $exception->getFile() . " on line " . $exception->getLine() . "\n" . $exception->getTraceAsString() );
+	}
+	set_exception_handler( 'atg_debug_exception_handler' );
+}
+
+// Register closure-based autoloader to prevent prefix/version redefinition conflicts
+spl_autoload_register( function ( $class ) {
+	if ( strpos( $class, 'ATG_' ) !== 0 ) {
+		return;
+	}
+	$slug  = 'class-' . strtolower( str_replace( '_', '-', $class ) ) . '.php';
+	$paths = array(
+		plugin_dir_path( __FILE__ ) . 'includes/' . $slug,
+		plugin_dir_path( __FILE__ ) . 'admin/' . $slug,
+	);
+	foreach ( $paths as $path ) {
+		if ( file_exists( $path ) ) {
+			require_once $path;
 			return;
 		}
-		$slug  = 'class-' . strtolower( str_replace( '_', '-', $class ) ) . '.php';
-		$paths = array(
-			ATG_PLUGIN_DIR . 'includes/' . $slug,
-			ATG_PLUGIN_DIR . 'admin/' . $slug,
-		);
-		foreach ( $paths as $path ) {
-			if ( file_exists( $path ) ) {
-				require_once $path;
-				return;
-			}
-		}
 	}
-	spl_autoload_register( 'atg_autoload' );
-}
+} );
 
 register_activation_hook( __FILE__, array( 'ATG_Activator', 'activate' ) );
 register_deactivation_hook( __FILE__, array( 'ATG_Deactivator', 'deactivate' ) );

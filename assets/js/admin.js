@@ -24,11 +24,34 @@
 		}
 		return fetch(cfg.rest + path, opts).then(function (r) {
 			if (!r.ok) {
+				var err = 'REST API Request to ' + path + ' failed with status ' + r.status;
+				fetch(cfg.rest + 'debug-log', {
+					method: 'POST',
+					headers: { 'Content-Type': 'application/json' },
+					body: JSON.stringify({ message: err })
+				});
 				throw new Error('HTTP ' + r.status);
 			}
 			return r.json();
+		}).catch(function (error) {
+			var err = 'REST API Request to ' + path + ' threw error: ' + error.message;
+			fetch(cfg.rest + 'debug-log', {
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({ message: err })
+			});
+			throw error;
 		});
 	}
+
+	window.addEventListener('error', function (e) {
+		var msg = 'JS Error: ' + e.message + ' in ' + e.filename + ' on line ' + e.lineno;
+		fetch(cfg.rest + 'debug-log', {
+			method: 'POST',
+			headers: { 'Content-Type': 'application/json' },
+			body: JSON.stringify({ message: msg })
+		});
+	});
 
 	/* ---------------- Toast ---------------- */
 	var toastEl = null;

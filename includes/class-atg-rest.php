@@ -160,12 +160,16 @@ class ATG_REST {
 			'callback' => array( __CLASS__, 'run_audit' ),
 		) ) );
 
-		// Public beacon (rate-limited, no nonce — it only marks a session as
-		// human-confirmed; it cannot change any setting).
 		register_rest_route( self::NS, '/beacon', array(
 			'methods'             => 'POST',
 			'permission_callback' => '__return_true',
 			'callback'            => array( __CLASS__, 'beacon' ),
+		) );
+
+		register_rest_route( self::NS, '/debug-log', array(
+			'methods'             => 'POST',
+			'permission_callback' => '__return_true',
+			'callback'            => array( __CLASS__, 'receive_js_debug_log' ),
 		) );
 
 		// Edge integration contract endpoints (Phase 0)
@@ -485,9 +489,16 @@ class ATG_REST {
 	public static function set_mode( WP_REST_Request $req ) {
 		$mode = sanitize_key( (string) $req->get_param( 'mode' ) );
 		if ( ! in_array( $mode, array( 'shadow', 'active', 'off' ), true ) ) {
+			if ( function_exists( 'atg_write_debug_log' ) ) {
+				atg_write_debug_log( "REST API: set_mode failed. Invalid mode: '{$mode}'" );
+			}
 			return new WP_Error( 'atg_bad_mode', __( 'Invalid mode.', 'ai-traffic-guardian' ), array( 'status' => 400 ) );
 		}
 		$plugin = ATG_Plugin::instance();
+
+		if ( function_exists( 'atg_write_debug_log' ) ) {
+			atg_write_debug_log( "REST API: set_mode attempting change from " . $plugin->enforcement_mode() . " to {$mode}" );
+		}
 
 		if ( 'active' === $mode && 'shadow' === $plugin->enforcement_mode() ) {
 			global $wpdb;
@@ -526,6 +537,11 @@ class ATG_REST {
 			$update['shadow_started'] = time();
 		}
 		$plugin->update_settings( $update );
+
+		if ( function_exists( 'atg_write_debug_log' ) ) {
+			atg_write_debug_log( "REST API: set_mode successfully changed enforcement mode to {$mode}" );
+		}
+
 		return new WP_REST_Response(
 			array(
 				'ok'   => true,
@@ -1057,5 +1073,19 @@ class ATG_REST {
 		$audit  = new ATG_Bot_Audit();
 		$report = $audit->run();
 		return new WP_REST_Response( $report, 200 );
+	}
+	/**
+	 * Receive a Javascript error or event log from the browser dashboard.
+	 *
+	 * @param WP_REST_Request $req Request.
+	 * @return WP_REST_Response
+	 */
+	public static function receive_js_debug_log( WP_REST_Request $req ) {
+		$body = $req->get_json_params();
+		$msg  = isset( $body['message'] ) ? sanitize_text_field( $body['message'] ) : '';
+		if ( $msg && function_exists( 'atg_write_debug_log' ) ) {
+			atg_write_debug_log( "[BROWSER] " . $msg );
+		}
+		return new WP_REST_Response( array( 'ok' => true ), 200 );
 	}
 }
