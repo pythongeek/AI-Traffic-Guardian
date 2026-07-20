@@ -172,6 +172,19 @@ class ATG_REST {
 			'callback'            => array( __CLASS__, 'receive_js_debug_log' ),
 		) );
 
+		register_rest_route( self::NS, '/debug', array_merge( $admin, array(
+			'methods'  => 'GET',
+			'callback' => array( __CLASS__, 'get_debug_log' ),
+		) ) );
+		register_rest_route( self::NS, '/debug', array_merge( $admin, array(
+			'methods'  => 'POST',
+			'callback' => array( __CLASS__, 'toggle_debug_log' ),
+		) ) );
+		register_rest_route( self::NS, '/debug', array_merge( $admin, array(
+			'methods'  => 'DELETE',
+			'callback' => array( __CLASS__, 'clear_debug_log' ),
+		) ) );
+
 		// Edge integration contract endpoints (Phase 0)
 		register_rest_route( self::NS, '/verify', array(
 			'methods'             => 'POST',
@@ -1087,5 +1100,68 @@ class ATG_REST {
 			atg_write_debug_log( "[BROWSER] " . $msg );
 		}
 		return new WP_REST_Response( array( 'ok' => true ), 200 );
+	}
+
+	/**
+	 * Get debug log entries.
+	 *
+	 * @param WP_REST_Request $req Request.
+	 * @return WP_REST_Response
+	 */
+	public static function get_debug_log( WP_REST_Request $req ) {
+		$context = sanitize_key( (string) $req->get_param( 'context' ) );
+		$limit   = min( 400, max( 1, (int) $req->get_param( 'limit' ) ?: 100 ) );
+
+		return new WP_REST_Response(
+			array(
+				'enabled' => ATG_Debug::enabled(),
+				'expiry'  => ATG_Debug::expiry(),
+				'entries' => ATG_Debug::get( $limit, $context ),
+			),
+			200
+		);
+	}
+
+	/**
+	 * Toggle debug logging on/off.
+	 *
+	 * @param WP_REST_Request $req Request.
+	 * @return WP_REST_Response
+	 */
+	public static function toggle_debug_log( WP_REST_Request $req ) {
+		$body    = $req->get_json_params();
+		$enabled = isset( $body['enabled'] ) ? (bool) $body['enabled'] : false;
+
+		if ( $enabled ) {
+			ATG_Debug::enable();
+		} else {
+			ATG_Debug::disable();
+		}
+
+		return new WP_REST_Response(
+			array(
+				'ok'      => true,
+				'enabled' => ATG_Debug::enabled(),
+				'expiry'  => ATG_Debug::expiry(),
+			),
+			200
+		);
+	}
+
+	/**
+	 * Clear the debug log option.
+	 *
+	 * @return WP_REST_Response
+	 */
+	public static function clear_debug_log() {
+		ATG_Debug::clear();
+		return new WP_REST_Response(
+			array(
+				'ok'      => true,
+				'enabled' => ATG_Debug::enabled(),
+				'expiry'  => ATG_Debug::expiry(),
+			),
+			200
+		);
 	}
 }

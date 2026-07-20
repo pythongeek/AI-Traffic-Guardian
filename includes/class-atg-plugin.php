@@ -144,10 +144,11 @@ final class ATG_Plugin {
 		return apply_filters( 'atg_default_settings', $defaults );
 	}
 
-	/**
-	 * Boot all modules.
-	 */
 	public function boot() {
+		// ── 1. Debug logger (must be first so everything else can log). ──
+		ATG_Debug::boot();
+		ATG_Debug::log( 'system', 'ATG boot start', array( 'request' => isset( $_SERVER['REQUEST_URI'] ) ? sanitize_text_field( wp_unslash( $_SERVER['REQUEST_URI'] ) ) : '' ) );
+
 		$network_settings = is_multisite() ? get_site_option( 'atg_network_settings', array() ) : array();
 		$local_settings   = get_option( 'atg_settings', array() );
 		$this->settings   = wp_parse_args( $local_settings, wp_parse_args( $network_settings, self::default_settings() ) );
@@ -172,11 +173,19 @@ final class ATG_Plugin {
 		$this->edge              = new ATG_Edge();
 		$this->wizard            = new ATG_Wizard();
 
-		// Schema self-healing: run on every boot so REST requests and front-end
-		// pages always have tables available, even if activation failed earlier.
-		// The version compare reads from WP's option cache — effectively free
-		// after the first request of a process.
-		ATG_DB::maybe_upgrade();
+		// Schema upgrades: admin_init ONLY.
+		// Moving this off plugins_loaded prevents upgrade.php from emitting
+		// output during REST / front-end requests (root cause of "265 chars
+		// unexpected output" that corrupted JSON responses).
+		add_action( 'admin_init', array( 'ATG_DB', 'maybe_upgrade' ), 1 );
+
+		// Deferred rewrite flush after activation
+		add_action( 'admin_init', array( $this, 'maybe_flush_rewrites' ), 5 );
+
+		// REST API output buffer guard
+		if ( defined( 'REST_REQUEST' ) && REST_REQUEST ) {
+			add_filter( 'rest_pre_echo_response', array( $this, 'rest_output_guard' ) );
+		}
 
 		// Front-end request classification & enforcement. Runs early, after
 		// pluggable functions (auth) are available.
@@ -233,6 +242,38 @@ final class ATG_Plugin {
 				$editor->remove_cap( 'atg_view_reports' );
 			}
 		}
+
+		ATG_Debug::log( 'system', 'ATG boot complete', array( 'mode' => $this->enforcement_mode() ) );
+	}
+
+	/**
+	 * REST output guard — drains any stray content that crept in before
+	 * the JSON response is sent. Fires on rest_pre_echo_response.
+	 *
+	 * @param mixed $result The REST response (pass-through).
+	 * @return mixed
+	 */
+	public function rest_output_guard( $result ) {
+		if ( ob_get_level() > 0 ) {
+			$stray = ob_get_clean();
+			if ( $stray ) {
+				ATG_Debug::stray_output( $stray, 'REST_REQUEST / rest_pre_echo_response filter' );
+			}
+		}
+		return $result;
+	}
+
+	/**
+	 * On the first admin_init after activation, register rewrites and flush.
+	 * Safe here because wp_rewrite is fully initialised at admin_init.
+	 */
+	public function maybe_flush_rewrites() {
+		if ( get_option( 'atg_flush_rewrites' ) ) {
+			delete_option( 'atg_flush_rewrites' );
+			ATG_Llms::register_rewrite();
+			flush_rewrite_rules( false ); // false = don't write htaccess (not needed for query-var rewrites).
+			ATG_Debug::log( 'system', 'Rewrite rules flushed (deferred from activation).' );
+		}
 	}
 
 	/**
@@ -252,8 +293,10 @@ final class ATG_Plugin {
 	 * @param array $new New values.
 	 */
 	public function update_settings( $new ) {
+		ATG_Debug::log( 'system', 'update_settings called', array( 'keys' => array_keys( $new ) ) );
 		$this->settings = wp_parse_args( $new, $this->settings );
-		update_option( 'atg_settings', $this->settings );
+		$saved          = update_option( 'atg_settings', $this->settings );
+		ATG_Debug::log( 'system', 'update_option(atg_settings)', array( 'saved' => $saved, 'enforcement' => $this->settings['enforcement'] ?? 'unknown' ) );
 	}
 
 	/**

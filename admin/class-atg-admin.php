@@ -33,6 +33,7 @@ class ATG_Admin {
 			'atg-settings'       => array( __( 'Settings', 'ai-traffic-guardian' ), 'settings.php', 'manage_options' ),
 			'atg-edge'           => array( __( 'Edge Setup', 'ai-traffic-guardian' ), 'edge-setup.php', 'manage_options' ),
 			'atg-report'         => array( __( 'Bot Audit Report', 'ai-traffic-guardian' ), 'report.php', 'manage_options' ),
+			'atg-debug'          => array( __( 'Debug Log', 'ai-traffic-guardian' ), 'debug-log.php', 'manage_options' ),
 		);
 	}
 

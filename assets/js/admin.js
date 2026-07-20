@@ -1161,6 +1161,176 @@
 		}
 	}
 
+	/* =========================================================
+	 * DEBUG LOGS
+	 * ======================================================= */
+	function initDebug() {
+		var entriesContainer = document.querySelector('[data-atg-debug-entries]');
+		var toggleBtn = document.querySelector('[data-atg-debug-toggle]');
+		var refreshBtn = document.querySelector('[data-atg-debug-refresh]');
+		var clearBtn = document.querySelector('[data-atg-debug-clear]');
+		var contextSelect = document.querySelector('[data-atg-debug-context]');
+		var searchInput = document.querySelector('[data-atg-debug-search]');
+		var liveInterval = null;
+		var isLogging = false;
+
+		function loadDebugLogs() {
+			var context = contextSelect ? contextSelect.value : '';
+			api('debug?context=' + encodeURIComponent(context)).then(function (data) {
+				isLogging = data.enabled;
+				updateUIState(data.enabled, data.expiry);
+				renderEntries(data.entries);
+			}).catch(function () {
+				if (entriesContainer) {
+					entriesContainer.innerHTML = '<div class="atg-empty is-error">Failed to load log entries.</div>';
+				}
+			});
+		}
+
+		function updateUIState(enabled, expiry) {
+			if (toggleBtn) {
+				toggleBtn.textContent = enabled ? 'Disable logging' : 'Enable logging';
+				if (enabled) {
+					toggleBtn.classList.remove('button-primary');
+				} else {
+					toggleBtn.classList.add('button-primary');
+				}
+			}
+
+			var card = document.querySelector('.atg-card');
+			var pillEl = document.querySelector('.atg-card-head h2 .atg-pill');
+			if (card) {
+				if (enabled) {
+					card.classList.add('atg-debug-active');
+					card.classList.remove('atg-debug-inactive');
+				} else {
+					card.classList.remove('atg-debug-active');
+					card.classList.add('atg-debug-inactive');
+				}
+			}
+			if (pillEl) {
+				pillEl.textContent = enabled ? 'LIVE' : 'OFF';
+				pillEl.className = enabled ? 'atg-pill atg-pill-allow' : 'atg-pill atg-pill-neutral';
+			}
+
+			if (enabled) {
+				if (!liveInterval) {
+					liveInterval = setInterval(loadDebugLogs, 5000);
+				}
+			} else {
+				if (liveInterval) {
+					clearInterval(liveInterval);
+					liveInterval = null;
+				}
+			}
+		}
+
+		function renderEntries(entries) {
+			if (!entriesContainer) return;
+			if (!entries || entries.length === 0) {
+				entriesContainer.innerHTML = '<div class="atg-empty">No log entries found.</div>';
+				return;
+			}
+
+			var query = searchInput ? searchInput.value.toLowerCase().trim() : '';
+
+			var html = '<table class="atg-table atg-debug-table" style="font-family:monospace; font-size:12px;">';
+			html += '<thead><tr>';
+			html += '<th style="width:150px;">Timestamp</th>';
+			html += '<th style="width:100px;">Context</th>';
+			html += '<th>Message</th>';
+			html += '<th>Caller</th>';
+			html += '</tr></thead><tbody>';
+
+			var count = 0;
+			entries.forEach(function (e) {
+				var msg = e.message || '';
+				var caller = e.caller || '';
+				var dataStr = e.data || '';
+
+				if (query && msg.toLowerCase().indexOf(query) === -1 && caller.toLowerCase().indexOf(query) === -1 && dataStr.toLowerCase().indexOf(query) === -1) {
+					return;
+				}
+
+				count++;
+				var contextCls = e.context === 'stray-output' || e.context === 'php-error' || e.context === 'error' ? 'block' : (e.context === 'rest' ? 'throttle' : 'neutral');
+				var rowId = 'atg-debug-row-' + count;
+
+				html += '<tr style="cursor:pointer;" onclick="var detail = document.getElementById(\'' + rowId + '\'); detail.style.display = detail.style.display === \'none\' ? \'table-row\' : \'none\';">';
+				html += '<td style="color:#64748b;">' + esc(e.ts) + '</td>';
+				html += '<td><span class="atg-pill atg-pill-' + contextCls + '" style="font-size:10px;text-transform:uppercase;">' + esc(e.context) + '</span></td>';
+				html += '<td><strong>' + esc(msg) + '</strong></td>';
+				html += '<td style="color:#475569;">' + esc(caller) + '</td>';
+				html += '</tr>';
+
+				if (dataStr) {
+					html += '<tr id="' + rowId + '" class="atg-debug-detail-row" style="display:none; background-color:#f8fafc;">';
+					html += '<td colspan="4" style="padding:15px; border-bottom:1px solid #e2e8f0;">';
+					html += '<pre style="margin:0; padding:10px; background:#1e293b; color:#f8fafc; border-radius:6px; overflow-x:auto; font-size:11px;">' + esc(dataStr) + '</pre>';
+					html += '</td></tr>';
+				}
+			});
+
+			html += '</tbody></table>';
+
+			if (count === 0) {
+				entriesContainer.innerHTML = '<div class="atg-empty">No matching log entries found.</div>';
+			} else {
+				entriesContainer.innerHTML = html;
+			}
+		}
+
+		if (toggleBtn) {
+			toggleBtn.addEventListener('click', function () {
+				toggleBtn.disabled = true;
+				api('debug', { method: 'POST', body: { enabled: !isLogging } }).then(function (res) {
+					toggleBtn.disabled = false;
+					isLogging = res.enabled;
+					updateUIState(res.enabled, res.expiry);
+					loadDebugLogs();
+					toast('Settings saved');
+				}).catch(function () {
+					toggleBtn.disabled = false;
+					toast('Failed to save settings', true);
+				});
+			});
+		}
+
+		if (refreshBtn) {
+			refreshBtn.addEventListener('click', function () {
+				loadDebugLogs();
+				toast('Refreshed log');
+			});
+		}
+
+		if (clearBtn) {
+			clearBtn.addEventListener('click', function () {
+				if (!confirm('Are you sure you want to clear the debug log?')) return;
+				clearBtn.disabled = true;
+				api('debug', { method: 'DELETE' }).then(function () {
+					clearBtn.disabled = false;
+					loadDebugLogs();
+					toast('Log cleared');
+				}).catch(function () {
+					clearBtn.disabled = false;
+					toast('Failed to clear log', true);
+				});
+			});
+		}
+
+		if (contextSelect) {
+			contextSelect.addEventListener('change', loadDebugLogs);
+		}
+
+		if (searchInput) {
+			searchInput.addEventListener('input', function () {
+				loadDebugLogs();
+			});
+		}
+
+		loadDebugLogs();
+	}
+
 	/* ---------------- Router ---------------- */
 	document.addEventListener('DOMContentLoaded', function () {
 		switch (page) {
@@ -1170,6 +1340,7 @@
 			case 'atg-allowlist': initAllowlist(); break;
 			case 'atg-alerts': initAlerts(); break;
 			case 'atg-audit': initAudit(); break;
+			case 'atg-debug': initDebug(); break;
 			case 'atg-protection':
 			case 'atg-analytics':
 			case 'atg-seo':
