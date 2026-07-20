@@ -125,8 +125,9 @@ class ATG_Debug {
 	 * @return bool
 	 */
 	public static function php_error_handler( $errno, $errstr, $errfile, $errline ) {
-		// Only log errors from ATG files to avoid noise.
-		if ( false === strpos( $errfile, 'ai-traffic-guardian' ) ) {
+		// Only log errors from this plugin's files to avoid noise.
+		$plugin_dir = dirname( dirname( __FILE__ ) );
+		if ( false === strpos( $errfile, $plugin_dir ) ) {
 			return false; // Delegate to default handler.
 		}
 		$levels = array(
