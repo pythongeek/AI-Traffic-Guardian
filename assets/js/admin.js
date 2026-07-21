@@ -332,10 +332,11 @@
 				return;
 			}
 			tbody.innerHTML = rows.map(function (r) {
-				var name = r.bot_name || (r.ua ? r.ua.substring(0, 42) : r.classification);
+				var uaStr = r.ua || '';
+				var name = r.bot_name || (uaStr ? uaStr.substring(0, 42) : r.classification);
 				return '<tr>' +
 					'<td>' + esc(r.ts) + '</td>' +
-					'<td title="' + esc(r.ua) + '">' + esc(name) + '</td>' +
+					'<td title="' + esc(uaStr) + '">' + esc(name) + '</td>' +
 					'<td>' + verifiedPill(r) + '</td>' +
 					'<td>' + pill(r.action) + (r.enforced === '0' ? ' <span class="atg-pill atg-pill-neutral">shadow</span>' : '') + '</td>' +
 					'</tr>';
