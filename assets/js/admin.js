@@ -646,11 +646,14 @@
 				btn.disabled = true;
 				api('policy/preset', { method: 'POST', body: { preset: presetKey } })
 					.then(function () {
+						btn.disabled = false;
 						toast(cfg.i18n.saved);
 						return reloadAll();
 					})
-					.catch(function () { toast(cfg.i18n.error, true); })
-					.finally(function () { btn.disabled = false; });
+					.catch(function () {
+						btn.disabled = false;
+						toast(cfg.i18n.error, true);
+					});
 			};
 		}
 
