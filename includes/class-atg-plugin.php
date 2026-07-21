@@ -203,6 +203,11 @@ final class ATG_Plugin {
 		// pluggable functions (auth) are available.
 		add_action( 'init', array( $this->classifier, 'handle_request' ), 1 );
 
+		// Load textdomain explicitly for WP < 6.7 compatibility.
+		add_action( 'init', function() {
+			load_plugin_textdomain( 'ai-traffic-guardian', false, dirname( ATG_PLUGIN_BASENAME ) . '/languages' );
+		} );
+
 		$this->analytics->hooks();
 		$this->form_guard->hooks();
 		$this->robots->hooks();
