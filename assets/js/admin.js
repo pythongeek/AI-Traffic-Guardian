@@ -625,24 +625,33 @@
 		function renderPresets(presets) {
 			var wrap = document.querySelector('[data-atg-presets]');
 			if (!wrap) { return; }
+			if (!presets || !Object.keys(presets).length) {
+				wrap.innerHTML = '<div class="atg-empty">No presets available.</div>';
+				return;
+			}
 			wrap.innerHTML = Object.keys(presets).map(function (key) {
 				var p = presets[key];
 				return '<div class="atg-preset">' +
 					'<h3>' + esc(p.label) + '</h3>' +
 					'<p>' + esc(p.description) + '</p>' +
-					'<button class="button button-primary" data-preset="' + esc(key) + '">Apply this preset</button>' +
+					'<button type="button" class="button button-primary atg-apply-preset-btn" data-preset="' + esc(key) + '">Apply this preset</button>' +
 					'</div>';
 			}).join('');
-			wrap.querySelectorAll('[data-preset]').forEach(function (btn) {
-				btn.addEventListener('click', function () {
-					api('policy/preset', { method: 'POST', body: { preset: btn.getAttribute('data-preset') } })
-						.then(function () {
-							toast(cfg.i18n.saved);
-							return reloadAll();
-						})
-						.catch(function () { toast(cfg.i18n.error, true); });
-				});
-			});
+
+			wrap.onclick = function (e) {
+				var btn = e.target.closest('.atg-apply-preset-btn');
+				if (!btn) return;
+				e.preventDefault();
+				var presetKey = btn.getAttribute('data-preset');
+				btn.disabled = true;
+				api('policy/preset', { method: 'POST', body: { preset: presetKey } })
+					.then(function () {
+						toast(cfg.i18n.saved);
+						return reloadAll();
+					})
+					.catch(function () { toast(cfg.i18n.error, true); })
+					.finally(function () { btn.disabled = false; });
+			};
 		}
 
 		function renderMatrix() {
