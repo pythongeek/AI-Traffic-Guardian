@@ -276,6 +276,12 @@ class ATG_REST {
 			ARRAY_A
 		);
 
+		$series    = is_array( $series ) ? $series : array();
+		$actions   = is_array( $actions ) ? $actions : array();
+		$purposes  = is_array( $purposes ) ? $purposes : array();
+		$vendors   = is_array( $vendors ) ? $vendors : array();
+		$countries = is_array( $countries ) ? $countries : array();
+
 		// KPIs.
 		$total    = 0;
 		$by_class = array();
@@ -986,6 +992,16 @@ class ATG_REST {
 
 		$body = wp_remote_retrieve_body( $res );
 		$data = json_decode( $body, true );
+
+		if ( ! is_array( $data ) ) {
+			$data = array(
+				'campaign_id' => null,
+				'unavailable' => true,
+				'message'     => __( 'Invalid response format received from campaign service.', 'ai-traffic-guardian' ),
+			);
+			set_transient( 'atg_active_campaign', $data, 15 * MINUTE_IN_SECONDS );
+			return new WP_REST_Response( $data, 200 );
+		}
 
 		set_transient( 'atg_active_campaign', $data, DAY_IN_SECONDS );
 		return new WP_REST_Response( $data, 200 );

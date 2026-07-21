@@ -39,6 +39,9 @@ class ATG_Report_Generator {
 			),
 			ARRAY_A
 		);
+		if ( ! is_array( $classes ) ) {
+			$classes = array();
+		}
 
 		$human_hits = 0;
 		$bot_hits   = 0;
@@ -62,6 +65,9 @@ class ATG_Report_Generator {
 			),
 			ARRAY_A
 		);
+		if ( ! is_array( $vendors ) ) {
+			$vendors = array();
+		}
 
 		// Get Googlebot hits specifically for comparisons.
 		$googlebot_hits = 0;
