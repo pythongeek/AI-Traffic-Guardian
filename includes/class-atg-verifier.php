@@ -142,7 +142,7 @@ class ATG_Verifier {
 		$response = wp_remote_get(
 			$source,
 			array(
-				'timeout'    => 8,
+				'timeout'    => 2,
 				'user-agent' => 'AI-Traffic-Guardian/' . ATG_VERSION . '; ' . home_url(),
 			)
 		);
