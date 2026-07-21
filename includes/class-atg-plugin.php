@@ -144,7 +144,19 @@ final class ATG_Plugin {
 		return apply_filters( 'atg_default_settings', $defaults );
 	}
 
+	/**
+	 * Boot state flag.
+	 *
+	 * @var bool
+	 */
+	private $booted = false;
+
 	public function boot() {
+		if ( $this->booted ) {
+			return;
+		}
+		$this->booted = true;
+
 		// ── 1. Debug logger (must be first so everything else can log). ──
 		ATG_Debug::boot();
 		ATG_Debug::log( 'system', 'ATG boot start', array( 'request' => isset( $_SERVER['REQUEST_URI'] ) ? sanitize_text_field( wp_unslash( $_SERVER['REQUEST_URI'] ) ) : '' ) );

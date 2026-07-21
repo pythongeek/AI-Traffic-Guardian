@@ -146,9 +146,10 @@ class ATG_DB {
 	public static function drop() {
 		global $wpdb;
 		foreach ( array( 'log', 'stats', 'alerts' ) as $t ) {
-			$wpdb->query(
-				'DROP TABLE IF EXISTS ' . self::table( $t )
-			);
+			$table_name = esc_sql( self::table( $t ) );
+			if ( ! empty( $table_name ) ) {
+				$wpdb->query( "DROP TABLE IF EXISTS {$table_name}" ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+			}
 		}
 	}
 }
