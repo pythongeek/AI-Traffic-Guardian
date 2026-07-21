@@ -437,7 +437,9 @@ class ATG_REST {
 	 * @return WP_REST_Response|WP_Error
 	 */
 	public static function apply_preset( WP_REST_Request $req ) {
-		$name = sanitize_key( (string) $req->get_param( 'preset' ) );
+		$params = $req->get_json_params();
+		$preset = isset( $params['preset'] ) ? $params['preset'] : $req->get_param( 'preset' );
+		$name   = sanitize_key( (string) $preset );
 		if ( ! ATG_Plugin::instance()->policy->apply_preset( $name ) ) {
 			return new WP_Error( 'atg_bad_preset', __( 'Unknown preset.', 'ai-traffic-guardian' ), array( 'status' => 400 ) );
 		}
